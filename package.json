@@ -8,16 +8,20 @@
     "dev": "dotenv -e .development.env -- nodemon --exec tsx src/index.ts",
     "dev:debug": "dotenv -e .env.development -- nodemon --exec tsx --inspect src/index.ts",
     "db:generate": "npx drizzle-kit generate",
-    "db:migrate": "npx drizzle-kit migrate",
-    "db:push": "npx drizzle-kit push",
+    "db:migrate:dev": "dotenv -e .development.env -- npx drizzle-kit migrate",
+    "db:migrate:prod": "dotenv -e .production.env -- npx drizzle-kit migrate",
+    "db:push:dev": "dotenv -e .development.env -- npx drizzle-kit push",
+    "db:push:prod": "dotenv -e .production.env -- npx drizzle-kit push",
     "build": "tsc",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/bun": "latest",
     "@types/cors": "^2.8.18",
     "@types/dotenv": "^8.2.3",
     "@types/express": "^5.0.1",
+    "@types/nodemailer": "^6.4.17",
     "dotenv-cli": "^8.0.0",
     "drizzle-kit": "^0.31.1",
     "nodemon": "^3.1.10",
@@ -27,11 +31,17 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/pg": "^8.15.1",
+    "@types/uuidv4": "^5.0.0",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.43.1",
     "express": "^5.1.0",
-    "pg": "^8.15.6"
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^7.0.3",
+    "pg": "^8.15.6",
+    "uuidv4": "^6.2.13"
   }
 }
