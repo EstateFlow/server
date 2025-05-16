@@ -1,3 +1,4 @@
+import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import {
   comparePassword,
@@ -12,10 +13,7 @@ import { emailVerificationTokens } from "../db/schema/email_verification_tokens.
 import { sendVerificationEmail } from "../services/email.service";
 import { refreshTokens } from "../db/schema/refresh_tokens.schema";
 import { googleOAuthCredentials } from "../db/schema/google_oauth_credentials.schema";
-import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
+import { facebookOAuthCredentials } from "../db/schema/facebook_oauth_credentials.schema";
 
 type User = InferSelectModel<typeof users>;
 type Role = (typeof roleEnum.enumValues)[number];
@@ -50,11 +48,13 @@ interface RefreshTokenResult {
   refreshToken: string;
 }
 
-interface GoogleAuthInput {
-  code: string;
+interface GoogleAuthResult {
+  accessToken: string;
+  refreshToken: string;
+  isNewUser: boolean;
 }
 
-interface GoogleAuthResult {
+interface FacebookAuthResult {
   accessToken: string;
   refreshToken: string;
   isNewUser: boolean;
@@ -229,7 +229,7 @@ export const googleAuth = async (code: string): Promise<GoogleAuthResult> => {
         code,
         client_id: process.env.GOOGLE_CLIENT_ID,
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: "postmessage",
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
         grant_type: "authorization_code",
       },
     );
@@ -311,5 +311,120 @@ export const googleAuth = async (code: string): Promise<GoogleAuthResult> => {
   } catch (error) {
     console.error("Error in googleAuth:", error);
     throw new Error("Google authentication failed");
+  }
+};
+
+export const facebookAuth = async (
+  code: string,
+): Promise<FacebookAuthResult> => {
+  try {
+    if (!code) {
+      throw new Error("Authorization code is missing");
+    }
+
+    const tokenResponse = await axios.post(
+      "https://graph.facebook.com/v20.0/oauth/access_token",
+      {
+        code,
+        client_id: process.env.FACEBOOK_CLIENT_ID,
+        client_secret: process.env.FACEBOOK_CLIENT_SECRET,
+        redirect_uri: process.env.FACEBOOK_REDIRECT_URI || "postmessage",
+        grant_type: "authorization_code",
+      },
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      },
+    );
+
+    const { access_token, expires_in } = tokenResponse.data;
+
+    const userInfoResponse = await axios.get("https://graph.facebook.com/me", {
+      params: {
+        fields: "id,email",
+        access_token,
+      },
+    });
+
+    const { id: facebook_id, email } = userInfoResponse.data;
+
+    if (!email) {
+      throw new Error("Email not provided by Facebook");
+    }
+
+    let userResult = await db
+      .select({
+        id: users.id,
+        isEmailVerified: users.isEmailVerified,
+      })
+      .from(users)
+      .where(eq(users.email, email));
+
+    let userId: string;
+    let isNewUser = false;
+
+    if (userResult.length === 0) {
+      const userResult = await db
+        .insert(users)
+        .values({
+          email,
+          isEmailVerified: true,
+          username: email.split("@")[0],
+          role: "renter_buyer",
+        })
+        .returning();
+      userId = userResult[0].id;
+      isNewUser = true;
+    } else {
+      userId = userResult[0].id;
+      await db
+        .update(users)
+        .set({ isEmailVerified: true })
+        .where(eq(users.id, userId));
+    }
+
+    await db
+      .insert(facebookOAuthCredentials)
+      .values({
+        userId,
+        facebookId: facebook_id,
+        accessToken: access_token,
+        refreshToken: null, // Facebook typically doesn't provide refresh tokens
+        tokenExpiry: expires_in
+          ? new Date(Date.now() + expires_in * 1000)
+          : null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: facebookOAuthCredentials.userId,
+        set: {
+          facebookId: facebook_id,
+          accessToken: access_token,
+          refreshToken: null,
+          tokenExpiry: expires_in
+            ? new Date(Date.now() + expires_in * 1000)
+            : null,
+          updatedAt: new Date(),
+        },
+      });
+
+    const accessToken = generateJwt(userId, email);
+    const refreshToken = await generateRefreshToken(userId);
+
+    return {
+      accessToken,
+      refreshToken,
+      isNewUser,
+    };
+  } catch (error: any) {
+    console.error(
+      "Service - Facebook auth error:",
+      error.response?.data || error.message,
+    );
+    throw new Error(
+      `Facebook authentication failed: ${error.response?.data?.error?.message || error.message}`,
+    );
   }
 };
