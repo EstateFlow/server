@@ -79,3 +79,54 @@ export const refreshToken: ExpressHandler = async (req, res) => {
     }
   }
 };
+
+export const googleAuth: ExpressHandler = async (req, res) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      res.status(400).json({ message: "Authorization code is required" });
+      return;
+    }
+    const { accessToken, refreshToken, isNewUser } =
+      await authService.googleAuth(code);
+
+    res.json({
+      accessToken,
+      refreshToken,
+      isNewUser,
+      message: isNewUser
+        ? "User created and logged in via Google"
+        : "Logged in via Google",
+    });
+  } catch (error) {
+    console.error("Google auth error:", error);
+  }
+};
+
+export const facebookAuth: ExpressHandler = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      res.status(400).json({ message: "Authorization code is required" });
+      return;
+    }
+
+    const result = await authService.facebookAuth(code);
+
+    res.json({
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      isNewUser: result.isNewUser,
+      message: result.isNewUser
+        ? "User created and logged in via Facebook"
+        : "Logged in via Facebook",
+    });
+  } catch (error: any) {
+    console.error(
+      "Controller - Facebook auth error:",
+      error.response?.data || error.message,
+    );
+    res.status(500).json({ message: "Facebook authentication failed" });
+  }
+};
