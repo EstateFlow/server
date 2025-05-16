@@ -19,7 +19,7 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   username: text("username").unique().notNull(),
   email: text("email").unique().notNull(),
-  passwordHash: text("password_hash").notNull(),
+  passwordHash: text("password_hash"),
   role: roleEnum("role").notNull(),
   isEmailVerified: boolean("is_email_verified").default(false),
   paypalCredentials: text("paypal_credentials"),

@@ -11,6 +11,11 @@ import { eq, gt, and, InferSelectModel } from "drizzle-orm";
 import { emailVerificationTokens } from "../db/schema/email_verification_tokens.schema";
 import { sendVerificationEmail } from "../services/email.service";
 import { refreshTokens } from "../db/schema/refresh_tokens.schema";
+import { googleOAuthCredentials } from "../db/schema/google_oauth_credentials.schema";
+import axios from "axios";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 type User = InferSelectModel<typeof users>;
 type Role = (typeof roleEnum.enumValues)[number];
@@ -43,6 +48,16 @@ interface LoginResult {
 interface RefreshTokenResult {
   accessToken: string;
   refreshToken: string;
+}
+
+interface GoogleAuthInput {
+  code: string;
+}
+
+interface GoogleAuthResult {
+  accessToken: string;
+  refreshToken: string;
+  isNewUser: boolean;
 }
 
 export const register = async ({
@@ -157,7 +172,7 @@ export const login = async ({
     throw new Error("Please verify your email");
   }
 
-  if (!(await comparePassword(password, user.passwordHash))) {
+  if (!(await comparePassword(password, user.passwordHash || ""))) {
     throw new Error("Invalid credentials");
   }
 
@@ -204,4 +219,97 @@ export const refreshToken = async ({
   const newRefreshToken = await generateRefreshToken(userId);
 
   return { accessToken, refreshToken: newRefreshToken };
+};
+
+export const googleAuth = async (code: string): Promise<GoogleAuthResult> => {
+  try {
+    const tokenResponse = await axios.post(
+      "https://oauth2.googleapis.com/token",
+      {
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: "postmessage",
+        grant_type: "authorization_code",
+      },
+    );
+
+    const { access_token, refresh_token, expires_in } = tokenResponse.data;
+
+    const userInfoResponse = await axios.get(
+      "https://www.googleapis.com/oauth2/v2/userinfo",
+      {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      },
+    );
+
+    const { id: google_id, email } = userInfoResponse.data;
+
+    let userResult = await db
+      .select({
+        id: users.id,
+        isEmailVerified: users.isEmailVerified,
+      })
+      .from(users)
+      .where(eq(users.email, email));
+
+    let userId: string;
+    let isNewUser = false;
+
+    if (userResult.length === 0) {
+      const userResult = await db
+        .insert(users)
+        .values({
+          email,
+          isEmailVerified: true,
+          username: email.split("@")[0],
+          role: "renter_buyer",
+        })
+        .returning();
+      userId = userResult[0].id;
+      isNewUser = true;
+    } else {
+      userId = userResult[0].id;
+      await db
+        .update(users)
+        .set({ isEmailVerified: true })
+        .where(eq(users.id, userId));
+    }
+
+    await db
+      .insert(googleOAuthCredentials)
+      .values({
+        userId,
+        googleId: google_id,
+        accessToken: access_token,
+        refreshToken: refresh_token || null,
+        tokenExpiry: new Date(Date.now() + expires_in * 1000),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: googleOAuthCredentials.userId,
+        set: {
+          googleId: google_id,
+          accessToken: access_token,
+          refreshToken: refresh_token || null,
+          tokenExpiry: new Date(Date.now() + expires_in * 1000),
+          updatedAt: new Date(),
+        },
+      });
+
+    const accessToken = generateJwt(userId, email);
+    const refreshToken = await generateRefreshToken(userId);
+
+    return {
+      accessToken,
+      refreshToken,
+      isNewUser,
+    };
+  } catch (error) {
+    console.error("Error in googleAuth:", error);
+    throw new Error("Google authentication failed");
+  }
 };

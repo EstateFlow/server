@@ -79,3 +79,27 @@ export const refreshToken: ExpressHandler = async (req, res) => {
     }
   }
 };
+
+export const googleAuth: ExpressHandler = async (req, res) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      res.status(400).json({ message: "Authorization code is required" });
+      return;
+    }
+    const { accessToken, refreshToken, isNewUser } =
+      await authService.googleAuth(code);
+
+    res.json({
+      accessToken,
+      refreshToken,
+      isNewUser,
+      message: isNewUser
+        ? "User created and logged in via Google"
+        : "Logged in via Google",
+    });
+  } catch (error) {
+    console.error("Google auth error:", error);
+  }
+};
