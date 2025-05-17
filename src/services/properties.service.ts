@@ -33,6 +33,23 @@ interface CreatePropertyInput {
   images?: { imageUrl: string; isPrimary: boolean }[];
 }
 
+interface UpdatePropertyInput {
+  title?: string;
+  description?: string;
+  propertyType?: "house" | "apartment";
+  transactionType?: "sale" | "rent";
+  price?: string;
+  currency?: string;
+  size?: string;
+  rooms?: number;
+  address?: string;
+  status?: "active" | "inactive" | "sold" | "rented";
+  documentUrl?: string;
+  verificationComments?: string;
+  isVerified?: boolean;
+  images?: { imageUrl: string; isPrimary: boolean }[];
+}
+
 export const getAllProperties = async (): Promise<PropertyWithRelations[]> => {
   const propertiesList = await db.select().from(properties);
   if (propertiesList.length === 0) {
@@ -155,5 +172,152 @@ export const addNewProperty = async (input: CreatePropertyInput) => {
     images,
     views: [],
     pricingHistory: pricingHistoryRecord,
+  };
+};
+
+export const deleteProperty = async (propertyId: string): Promise<void> => {
+  try {
+    const existingProperty = await db
+      .select()
+      .from(properties)
+      .where(eq(properties.id, propertyId))
+      .limit(1);
+
+    if (!existingProperty.length) {
+      throw new Error(`Property with ID ${propertyId} not found`);
+    }
+
+    await db.delete(properties).where(eq(properties.id, propertyId));
+    console.log(`Property with ID ${propertyId} deleted successfully`);
+  } catch (error: any) {
+    throw new Error(`Failed to delete property: ${error.message}`);
+  }
+};
+
+export const updateProperty = async (
+  propertyId: string,
+  input: UpdatePropertyInput,
+): Promise<PropertyWithRelations> => {
+  const existingProperty = await db
+    .select()
+    .from(properties)
+    .where(eq(properties.id, propertyId))
+    .limit(1);
+
+  if (!existingProperty.length) {
+    throw new Error(`Property with ID ${propertyId} not found`);
+  }
+
+  const updateData: Partial<Property> = {};
+  if (input.title !== undefined) {
+    updateData.title = input.title;
+  }
+  if (input.description !== undefined) {
+    updateData.description = input.description;
+  }
+  if (input.propertyType !== undefined) {
+    updateData.propertyType = input.propertyType;
+  }
+  if (input.transactionType !== undefined) {
+    updateData.transactionType = input.transactionType;
+  }
+  if (input.price !== undefined) {
+    updateData.price = input.price;
+  }
+  if (input.currency !== undefined) {
+    updateData.currency = input.currency;
+  }
+  if (input.size !== undefined) {
+    updateData.size = input.size;
+  }
+  if (input.rooms !== undefined) {
+    updateData.rooms = input.rooms;
+  }
+  if (input.address !== undefined) {
+    updateData.address = input.address;
+  }
+  if (input.status !== undefined) {
+    updateData.status = input.status;
+  }
+  if (input.documentUrl !== undefined) {
+    updateData.documentUrl = input.documentUrl;
+  }
+  if (input.verificationComments !== undefined) {
+    updateData.verificationComments = input.verificationComments;
+  }
+  if (input.isVerified !== undefined) {
+    updateData.isVerified = input.isVerified;
+  }
+
+  updateData.updatedAt = new Date();
+
+  const updatedProperty = await db
+    .update(properties)
+    .set(updateData)
+    .where(eq(properties.id, propertyId))
+    .returning();
+
+  let images: PropertyImage[] = [];
+  if (input.images !== undefined) {
+    await db
+      .delete(propertyImages)
+      .where(eq(propertyImages.propertyId, propertyId));
+    if (input.images.length > 0) {
+      images = await db
+        .insert(propertyImages)
+        .values(
+          input.images.map((img) => ({
+            propertyId,
+            imageUrl: img.imageUrl,
+            isPrimary: img.isPrimary,
+          })),
+        )
+        .returning();
+    }
+  }
+
+  let pricingHistoryRecord: PricingHistory[] = [];
+  if (input.price !== undefined || input.currency !== undefined) {
+    const newPrice = input.price || existingProperty[0].price;
+    const newCurrency = input.currency || existingProperty[0].currency || "USD";
+    pricingHistoryRecord = await db
+      .insert(pricingHistory)
+      .values({
+        propertyId,
+        price: newPrice,
+        currency: newCurrency,
+        effectiveDate: new Date(),
+      })
+      .returning();
+  }
+
+  const [fetchedImages, views, pricing] = await Promise.all([
+    input.images !== undefined
+      ? Promise.resolve(images)
+      : db
+          .select()
+          .from(propertyImages)
+          .where(eq(propertyImages.propertyId, propertyId)),
+    db
+      .select()
+      .from(propertyViews)
+      .where(eq(propertyViews.propertyId, propertyId)),
+    db
+      .select()
+      .from(pricingHistory)
+      .where(eq(pricingHistory.propertyId, propertyId)),
+  ]);
+
+  return {
+    ...updatedProperty[0],
+    images: fetchedImages,
+    views,
+    pricingHistory:
+      pricingHistoryRecord.length > 0
+        ? pricing
+        : await db
+            .select()
+            .from(pricingHistory)
+            .where(eq(pricingHistory.propertyId, propertyId)),
   };
 };
