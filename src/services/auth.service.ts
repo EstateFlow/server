@@ -7,7 +7,7 @@ import {
   hashPassword,
 } from "../utils/auth.utils";
 import { db } from "../db";
-import { users, roleEnum } from "../db/schema/users.schema";
+import { roleEnum, users } from "../db/schema/users.schema";
 import { eq, gt, and, InferSelectModel } from "drizzle-orm";
 import { emailVerificationTokens } from "../db/schema/email_verification_tokens.schema";
 import { sendVerificationEmail } from "../services/email.service";
@@ -390,7 +390,6 @@ export const facebookAuth = async (
         userId,
         facebookId: facebook_id,
         accessToken: access_token,
-        refreshToken: null, // Facebook typically doesn't provide refresh tokens
         tokenExpiry: expires_in
           ? new Date(Date.now() + expires_in * 1000)
           : null,
@@ -402,7 +401,6 @@ export const facebookAuth = async (
         set: {
           facebookId: facebook_id,
           accessToken: access_token,
-          refreshToken: null,
           tokenExpiry: expires_in
             ? new Date(Date.now() + expires_in * 1000)
             : null,
