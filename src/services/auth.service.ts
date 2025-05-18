@@ -8,57 +8,26 @@ import {
 } from "../utils/auth.utils";
 import { db } from "../db";
 import { roleEnum, users } from "../db/schema/users.schema";
-import { eq, gt, and, InferSelectModel } from "drizzle-orm";
+import { eq, gt, and } from "drizzle-orm";
 import { emailVerificationTokens } from "../db/schema/email_verification_tokens.schema";
 import { sendVerificationEmail } from "../services/email.service";
 import { refreshTokens } from "../db/schema/refresh_tokens.schema";
 import { googleOAuthCredentials } from "../db/schema/google_oauth_credentials.schema";
 import { facebookOAuthCredentials } from "../db/schema/facebook_oauth_credentials.schema";
 
-type User = InferSelectModel<typeof users>;
-type Role = (typeof roleEnum.enumValues)[number];
+import {
+  User,
+  Role,
+  RegisterInput,
+  LoginInput,
+  RefreshTokenInput,
+  RegisterResult,
+  LoginResult,
+  RefreshTokenResult,
+  GoogleAuthResult,
+  FacebookAuthResult,
+} from "../types/auth.types";
 
-interface RegisterInput {
-  username: string;
-  email: string;
-  password: string;
-  role: Role;
-}
-
-interface LoginInput {
-  email: string;
-  password: string;
-}
-
-interface RefreshTokenInput {
-  refreshToken: string;
-}
-
-interface RegisterResult {
-  userId: string;
-}
-
-interface LoginResult {
-  accessToken: string;
-  refreshToken: string;
-}
-
-interface RefreshTokenResult {
-  accessToken: string;
-  refreshToken: string;
-}
-
-interface GoogleAuthResult {
-  accessToken: string;
-  refreshToken: string;
-  isNewUser: boolean;
-}
-
-interface FacebookAuthResult {
-  accessToken: string;
-  refreshToken: string;
-  isNewUser: boolean;
-}
 
 export const register = async ({
   username,
