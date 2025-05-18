@@ -5,50 +5,16 @@ import { propertyImages } from "../db/schema/property_images.schema";
 import { propertyViews } from "../db/schema/property_views.schema";
 import { eq, inArray, InferSelectModel } from "drizzle-orm";
 
-type Property = InferSelectModel<typeof properties>;
-type PropertyImage = InferSelectModel<typeof propertyImages>;
-type PropertyView = InferSelectModel<typeof propertyViews>;
-type PricingHistory = InferSelectModel<typeof pricingHistory>;
+import {
+  Property,
+  PropertyImage,
+  PropertyView,
+  PricingHistory,
+  PropertyWithRelations,
+  CreatePropertyInput,
+  UpdatePropertyInput
+} from "../types/properties.types";
 
-interface PropertyWithRelations extends Property {
-  images: PropertyImage[];
-  views: PropertyView[];
-  pricingHistory: PricingHistory[];
-}
-
-interface CreatePropertyInput {
-  ownerId: string;
-  title: string;
-  description?: string;
-  propertyType: "house" | "apartment";
-  transactionType: "sale" | "rent";
-  price: string;
-  currency?: string;
-  size?: string;
-  rooms?: number;
-  address: string;
-  status?: "active" | "inactive" | "sold" | "rented";
-  documentUrl?: string;
-  verificationComments?: string;
-  images?: { imageUrl: string; isPrimary: boolean }[];
-}
-
-interface UpdatePropertyInput {
-  title?: string;
-  description?: string;
-  propertyType?: "house" | "apartment";
-  transactionType?: "sale" | "rent";
-  price?: string;
-  currency?: string;
-  size?: string;
-  rooms?: number;
-  address?: string;
-  status?: "active" | "inactive" | "sold" | "rented";
-  documentUrl?: string;
-  verificationComments?: string;
-  isVerified?: boolean;
-  images?: { imageUrl: string; isPrimary: boolean }[];
-}
 
 export const getAllProperties = async (): Promise<PropertyWithRelations[]> => {
   const propertiesList = await db.select().from(properties);
