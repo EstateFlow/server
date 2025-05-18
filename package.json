@@ -3,8 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "node dist/index.js",
-    "start:prod": "dotenv -e .production.env -- node dist/index.js",
+    "start": "dotenv -e .production.env -- bun dist/index.js",
     "dev": "dotenv -e .development.env -- nodemon --exec tsx src/index.ts",
     "dev:debug": "dotenv -e .env.development -- nodemon --exec tsx --inspect src/index.ts",
     "db:generate": "npx drizzle-kit generate",

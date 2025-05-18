@@ -13,9 +13,13 @@ app.use(express.json());
 
 app.use("/api/auth", authRouter);
 app.use("/", propertiesRouter);
+app.get("/", (req, res) => {
+  res.send("Hello, world!");
+});
 
-const PORT = process.env.PORT || 3001;
+const PORT = parseInt(process.env.PORT || "10000", 10);
+const HOST = "0.0.0.0";
 
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
   console.log(`Server running on port ${PORT}`);
 });
