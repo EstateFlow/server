@@ -16,7 +16,13 @@ export const register: ExpressHandler = async (req, res) => {
       .json({ message: "Registration successful. Please verify your email." });
   } catch (error: any) {
     console.error("Error in register:", error);
-    res.status(500).json({ message: error.message || "Internal server error" });
+    if (error.message === "User already exists") {
+      res.status(409).json({ message: "User with this email already exists" });
+    } else {
+      res
+        .status(500)
+        .json({ message: error.message || "Internal server error" });
+    }
   }
 };
 
@@ -50,10 +56,12 @@ export const login: ExpressHandler = async (req, res) => {
     res.json({ accessToken, refreshToken });
   } catch (error: any) {
     console.error("Error in login:", error);
-    if (error.message === "Invalid credentials") {
-      res.status(401).json({ message: error.message });
+    if (error.message === "User not found") {
+      res.status(404).json({ message: "User with this email does not exist" });
+    } else if (error.message === "Incorrect password") {
+      res.status(401).json({ message: "Incorrect password" });
     } else if (error.message === "Please verify your email") {
-      res.status(403).json({ message: error.message });
+      res.status(403).json({ message: "Please verify your email" });
     } else {
       res.status(500).json({ message: "Internal server error" });
     }

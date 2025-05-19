@@ -10,7 +10,6 @@ import {
 
 const router = Router();
 
-
 /**
  * @swagger
  * /api/auth/register:
@@ -49,11 +48,27 @@ const router = Router();
  *               properties:
  *                 message:
  *                   type: string
+ *       409:
+ *        description: User with this email already exists
+ *        content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *
  *       500:
- *         description: Internal server error
+ *        description: Internal server error
+ *        content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  */
 router.post("/register", register);
-
 
 /**
  * @swagger
@@ -90,14 +105,36 @@ router.post("/register", register);
  *                 refreshToken:
  *                   type: string
  *       401:
- *         description: Invalid credentials
+ *         description: Incorrect password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       403:
  *         description: Email not verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: User with this email does not exist
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       500:
  *         description: Internal server error
  */
 router.post("/login", login);
-
 
 /**
  * @swagger
@@ -137,7 +174,6 @@ router.post("/login", login);
  *         description: Internal server error
  */
 router.post("/refresh-token", refreshToken);
-
 
 /**
  * @swagger
@@ -180,7 +216,6 @@ router.post("/refresh-token", refreshToken);
  */
 router.post("/google", googleAuth);
 
-
 /**
  * @swagger
  * /api/auth/facebook:
@@ -221,7 +256,6 @@ router.post("/google", googleAuth);
  *         description: Facebook authentication failed
  */
 router.post("/facebook", facebookAuth);
-
 
 /**
  * @swagger
