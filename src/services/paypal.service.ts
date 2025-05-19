@@ -1,11 +1,12 @@
 import axios from "axios";
-import { loadPayPalConfig } from "../paypal.config";
+import dotenv from "dotenv";
 
-const config = loadPayPalConfig();
+const envFile = process.env.NODE_ENV === "production" ? ".production.env" : ".development.env";
+dotenv.config({ path: envFile });
 
-const PAYPAL_API = config["PAYPAL_API"];
-const CLIENT_ID = config["PAYPAL_CLIENT_ID"];
-const CLIENT_SECRET = config["PAYPAL_CLIENT_SECRET"];
+const PAYPAL_API = process.env.PAYPAL_API!;
+const CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
+const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
 
 async function getAccessToken(): Promise<string> {
   const basicAuth = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64");
