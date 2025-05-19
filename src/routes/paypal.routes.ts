@@ -41,7 +41,7 @@ router.post("/create-order", async (req, res) => {
     res.json({ id: order.id });
   } catch (err) {
     const error = err as Error;
-    res.status(500).json({ error: "Failed to create PayPal order", details: error.message });
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -85,7 +85,7 @@ router.post("/capture-order", async (req, res) => {
     res.json({ status: capture.status, id: capture.id });
   } catch (err) {
     const error = err as Error;
-    res.status(500).json({ error: "Failed to capture PayPal order", details: error.message });
+    res.status(500).json({ message: error.message });
   }
 });
 
