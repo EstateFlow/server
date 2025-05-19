@@ -17,7 +17,6 @@ import { facebookOAuthCredentials } from "../db/schema/facebook_oauth_credential
 
 import {
   User,
-  Role,
   RegisterInput,
   LoginInput,
   RefreshTokenInput,
@@ -27,7 +26,6 @@ import {
   GoogleAuthResult,
   FacebookAuthResult,
 } from "../types/auth.types";
-
 
 export const register = async ({
   username,
@@ -40,6 +38,16 @@ export const register = async ({
       `Invalid role. Must be one of: ${roleEnum.enumValues.join(", ")}`,
     );
   }
+
+  const existingUser = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email));
+
+  if (existingUser.length > 0) {
+    throw new Error("User already exists");
+  }
+
   const passwordHash = await hashPassword(password);
   const verificationToken = uuidv4();
 
@@ -134,7 +142,7 @@ export const login = async ({
   const user = userResult[0];
 
   if (!user) {
-    throw new Error("Invalid credentials");
+    throw new Error("User not found");
   }
 
   if (!user.isEmailVerified) {
@@ -142,7 +150,7 @@ export const login = async ({
   }
 
   if (!(await comparePassword(password, user.passwordHash || ""))) {
-    throw new Error("Invalid credentials");
+    throw new Error("Incorrect password");
   }
 
   const accessToken = generateJwt(user.id, email);
