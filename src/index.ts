@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import authRouter from "./routes/auth.routes";
 import propertiesRouter from "./routes/properties.routes";
+import paypalRoutes from './routes/paypal.routes';
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./swagger.config";
 
@@ -15,6 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/paypal', paypalRoutes);
 app.use("/api/auth", authRouter);
 app.use("/", propertiesRouter);
 app.get("/", (req, res) => {
