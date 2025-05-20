@@ -1,17 +1,18 @@
 import { Router } from "express";
 import {
-  createConversationWithPropertyAnalysis,
-  getSystemPrompts,
+  createConversation,
+  getSystemPrompt,
   updateSystemPrompt,
+  getConversationHistory,
+  sendMessage,
 } from "../controllers/ai.controller";
 
 const router = Router();
 
-router.get("/system-prompts", getSystemPrompts);
-router.put("/system-prompts", updateSystemPrompt);
-router.post(
-  "/conversations/property-analysis",
-  createConversationWithPropertyAnalysis,
-);
+router.get("/system-prompt", getSystemPrompt);
+router.put("/system-prompt", updateSystemPrompt);
+router.post("/conversations", createConversation);
+router.get("/conversations/:userId/history", getConversationHistory);
+router.post("/conversations/:conversationId/messages", sendMessage);
 
 export default router;
