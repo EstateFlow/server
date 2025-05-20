@@ -3,18 +3,16 @@ import { pricingHistory } from "../db/schema/pricing_history.schema";
 import { properties } from "../db/schema/properties.schema";
 import { propertyImages } from "../db/schema/property_images.schema";
 import { propertyViews } from "../db/schema/property_views.schema";
-import { eq, inArray, InferSelectModel } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import {
   Property,
   PropertyImage,
-  PropertyView,
   PricingHistory,
   PropertyWithRelations,
   CreatePropertyInput,
-  UpdatePropertyInput
+  UpdatePropertyInput,
 } from "../types/properties.types";
-
 
 export const getAllProperties = async (): Promise<PropertyWithRelations[]> => {
   const propertiesList = await db.select().from(properties);

@@ -2,7 +2,6 @@ import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { db } from "../db";
-import { users } from "../db/schema/users.schema";
 import { refreshTokens } from "../db/schema/refresh_tokens.schema";
 
 dotenv.config();
