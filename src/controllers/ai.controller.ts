@@ -1,8 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
 import * as aiService from "../services/ai.service";
+import { AuthRequest } from "../middleware/auth.middleware";
 
 type ExpressHandler = (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) => Promise<void>;
@@ -26,17 +27,17 @@ export const getSystemPrompt: ExpressHandler = async (req, res) => {
 
 export const updateSystemPrompt: ExpressHandler = async (req, res) => {
   try {
-    const { userId, name, newContent } = req.body;
+    const { name, newContent } = req.body;
 
-    if (!userId || !name || !newContent) {
+    if (!name || !newContent) {
       res.status(400).json({
-        message: "Missing required fields: userId, name, or newContent",
+        message: "Missing required fields:  name or newContent",
       });
       return;
     }
 
     const updatedPrompt = await aiService.updateSystemPrompt(
-      userId,
+      req.user!.userId,
       name,
       newContent,
     );
@@ -65,14 +66,9 @@ export const updateSystemPrompt: ExpressHandler = async (req, res) => {
 
 export const createConversation: ExpressHandler = async (req, res) => {
   try {
-    const { userId, title } = req.body;
+    const { title } = req.body;
 
-    if (!userId) {
-      res.status(400).json({ message: "Missing required field: userId" });
-      return;
-    }
-
-    const result = await aiService.createConversation(userId, title);
+    const result = await aiService.createConversation(req.user!.userId, title);
     res.status(201).json({
       message: "Conversation created with property analysis",
       conversation: result.conversation,
@@ -80,7 +76,7 @@ export const createConversation: ExpressHandler = async (req, res) => {
     });
   } catch (error: any) {
     console.error(
-      `Error creating conversation (userId: ${req.body.userId}):`,
+      `Error creating conversation (userId: ${req.user!.userId}):`,
       error,
     );
     if (error.message === "User not found") {
@@ -99,14 +95,7 @@ export const createConversation: ExpressHandler = async (req, res) => {
 
 export const getConversationHistory: ExpressHandler = async (req, res) => {
   try {
-    const { userId } = req.params;
-
-    if (!userId) {
-      res.status(400).json({ message: "Missing required field: userId" });
-      return;
-    }
-
-    const messages = await aiService.getConversationHistory(userId);
+    const messages = await aiService.getConversationHistory(req.user!.userId);
     res.json({ messages });
   } catch (error: any) {
     console.error("Error fetching conversation history:", error);
@@ -123,16 +112,16 @@ export const getConversationHistory: ExpressHandler = async (req, res) => {
 export const sendMessage: ExpressHandler = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const { userId, message } = req.body;
+    const { message } = req.body;
 
-    if (!userId || !message || !conversationId) {
+    if (!message || !conversationId) {
       res.status(400).json({
-        message: "Missing required fields: userId, message, or conversationId",
+        message: "Missing required fields:  message or conversationId",
       });
       return;
     }
 
-    const result = await aiService.sendMessage(userId, message);
+    const result = await aiService.sendMessage(req.user!.userId, message);
     res.status(200).json({
       message: "Message sent successfully",
       userMessage: result.userMessage,

@@ -8,7 +8,7 @@ import { systemPrompts } from "../db/schema/system_prompts.schema";
 import { getAllProperties } from "./properties.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI("AIzaSyBs2eLonayNX_K6RNTQftx-e1jFtDOpGQg");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 const activeChatSessions = new Map();
 
 export const getDefaultSystemPrompt = async () => {

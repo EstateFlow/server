@@ -1,4 +1,10 @@
-import { Router } from "express";
+import {
+  Router,
+  Request,
+  Response,
+  NextFunction,
+  RequestHandler,
+} from "express";
 import {
   facebookAuth,
   googleAuth,
@@ -7,8 +13,16 @@ import {
   register,
   verifyEmail,
 } from "../controllers/auth.controller";
+import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
+
+interface AuthRequest extends Request {
+  user?: {
+    userId: string;
+    email: string;
+  };
+}
 
 /**
  * @swagger
