@@ -3,8 +3,7 @@ import { pricingHistory } from "../db/schema/pricing_history.schema";
 import { properties } from "../db/schema/properties.schema";
 import { propertyImages } from "../db/schema/property_images.schema";
 import { propertyViews } from "../db/schema/property_views.schema";
-import { eq, inArray } from "drizzle-orm";
-
+import { eq, inArray, and } from "drizzle-orm";
 import {
   Property,
   PropertyImage,
@@ -13,14 +12,71 @@ import {
   CreatePropertyInput,
   UpdatePropertyInput,
 } from "../types/properties.types";
+import { users } from "../db/schema/users.schema";
 
-export const getAllProperties = async (): Promise<PropertyWithRelations[]> => {
-  const propertiesList = await db.select().from(properties);
+export const getProperties = async (
+  filterParam: string = "active",
+): Promise<PropertyWithRelations[]> => {
+  let propertiesList;
+
+  switch (filterParam) {
+    case "active":
+      propertiesList = await db
+        .select({
+          property: properties,
+          owner: users,
+        })
+        .from(properties)
+        .leftJoin(users, eq(properties.ownerId, users.id))
+        .where(
+          and(eq(properties.status, "active"), eq(properties.isVerified, true)),
+        );
+      break;
+    case "sold_rented":
+      propertiesList = await db
+        .select({
+          property: properties,
+          owner: users,
+        })
+        .from(properties)
+        .leftJoin(users, eq(properties.ownerId, users.id))
+        .where(
+          and(
+            inArray(properties.status, ["sold", "rented"]),
+            eq(properties.isVerified, true),
+          ),
+        );
+      break;
+    case "inactive":
+      propertiesList = await db
+        .select({
+          property: properties,
+          owner: users,
+        })
+        .from(properties)
+        .leftJoin(users, eq(properties.ownerId, users.id))
+        .where(
+          and(
+            eq(properties.status, "inactive"),
+            eq(properties.isVerified, true),
+          ),
+        );
+      break;
+    default:
+      propertiesList = await db
+        .select({
+          property: properties,
+          owner: users,
+        })
+        .from(properties)
+        .leftJoin(users, eq(properties.ownerId, users.id));
+      break;
+  }
   if (propertiesList.length === 0) {
     return [];
   }
 
-  const propertyIds = propertiesList.map((p) => p.id);
+  const propertyIds = propertiesList.map((p) => p.property.id);
 
   const [images, views, pricing] = await Promise.all([
     db
@@ -37,15 +93,16 @@ export const getAllProperties = async (): Promise<PropertyWithRelations[]> => {
       .where(inArray(pricingHistory.propertyId, propertyIds)),
   ]);
 
-  return propertiesList.map((property) => ({
+  return propertiesList.map(({ property, owner }) => ({
     ...property,
     images: images.filter((img) => img.propertyId === property.id),
     views: views.filter((view) => view.propertyId === property.id),
     pricingHistory: pricing.filter((p) => p.propertyId === property.id),
+    owner,
   }));
 };
 
-export const getCertainProperty = async (
+export const getProperty = async (
   propertyId: string,
 ): Promise<PropertyWithRelations> => {
   const property = await db
@@ -54,12 +111,14 @@ export const getCertainProperty = async (
       image: propertyImages,
       view: propertyViews,
       pricing: pricingHistory,
+      owner: users,
     })
     .from(properties)
     .where(eq(properties.id, propertyId))
     .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
     .leftJoin(propertyViews, eq(properties.id, propertyViews.propertyId))
-    .leftJoin(pricingHistory, eq(properties.id, pricingHistory.propertyId));
+    .leftJoin(pricingHistory, eq(properties.id, pricingHistory.propertyId))
+    .leftJoin(users, eq(properties.ownerId, users.id));
 
   if (property.length === 0) {
     throw new Error(`Property with ID ${propertyId} not found`);
@@ -67,10 +126,16 @@ export const getCertainProperty = async (
 
   const propertyWithRelations = property.reduce(
     (acc: PropertyWithRelations, row) => {
-      const { property, image, view, pricing } = row;
+      const { property, image, view, pricing, owner } = row;
 
       if (!acc.id) {
-        acc = { ...property, images: [], views: [], pricingHistory: [] };
+        acc = {
+          ...property,
+          images: [],
+          views: [],
+          pricingHistory: [],
+          owner: owner,
+        };
       }
 
       if (image) acc.images.push(image);
@@ -255,7 +320,7 @@ export const updateProperty = async (
       .returning();
   }
 
-  const [fetchedImages, views, pricing] = await Promise.all([
+  const [fetchedImages, views, pricing, owner] = await Promise.all([
     input.images !== undefined
       ? Promise.resolve(images)
       : db
@@ -270,6 +335,11 @@ export const updateProperty = async (
       .select()
       .from(pricingHistory)
       .where(eq(pricingHistory.propertyId, propertyId)),
+    db
+      .select()
+      .from(users)
+      .where(eq(users.id, existingProperty[0].ownerId))
+      .then((res) => res[0] || null),
   ]);
 
   return {
@@ -283,5 +353,6 @@ export const updateProperty = async (
             .select()
             .from(pricingHistory)
             .where(eq(pricingHistory.propertyId, propertyId)),
+    owner,
   };
 };
