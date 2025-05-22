@@ -14,6 +14,16 @@ router.use(authMiddleware);
 
 /**
  * @swagger
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ */
+
+/**
+ * @swagger
  * /ai/system-prompt:
  *   get:
  *     summary: Get default system prompt
