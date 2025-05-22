@@ -5,7 +5,7 @@ import { conversations } from "../db/schema/conversations.schema";
 import { messages } from "../db/schema/messages.schema";
 import { v4 as uuidv4 } from "uuid";
 import { systemPrompts } from "../db/schema/system_prompts.schema";
-import { getAllProperties } from "./properties.service";
+import { getProperties } from "./properties.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
@@ -104,7 +104,7 @@ export const createConversation = async (
     }
 
     const defaultPrompt = await getDefaultSystemPrompt();
-    const propertiesList = await getAllProperties();
+    const propertiesList = await getProperties("active");
 
     if (propertiesList.length === 0) {
       throw new Error("No properties found for analysis");

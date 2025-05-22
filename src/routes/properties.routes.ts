@@ -2,8 +2,8 @@ import { Router } from "express";
 import {
   addNewProperty,
   deleteProperty,
-  getAllProperties,
-  getCertainProperty,
+  getProperty,
+  getProperties,
   updateProperty,
 } from "../controllers/properties.controller";
 
@@ -13,6 +13,34 @@ const router = Router();
  * @swagger
  * components:
  *   schemas:
+ *     User:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         username:
+ *           type: string
+ *         email:
+ *           type: string
+ *           format: email
+ *         role:
+ *           type: string
+ *           enum: [renter_buyer, private_seller, agency, moderator, admin]
+ *         isEmailVerified:
+ *           type: boolean
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *       required:
+ *         - id
+ *         - username
+ *         - email
+ *         - role
+ *
  *     PropertyImage:
  *       type: object
  *       properties:
@@ -32,7 +60,7 @@ const router = Router();
  *         - propertyId
  *         - imageUrl
  *         - isPrimary
- * 
+ *
  *     PropertyView:
  *       type: object
  *       properties:
@@ -45,15 +73,11 @@ const router = Router();
  *         viewedAt:
  *           type: string
  *           format: date-time
- *         viewerIp:
- *           type: string
- *           format: ipv4
  *       required:
  *         - id
  *         - propertyId
  *         - viewedAt
- *         - viewerIp
- * 
+ *
  *     PricingHistory:
  *       type: object
  *       properties:
@@ -76,7 +100,7 @@ const router = Router();
  *         - price
  *         - currency
  *         - effectiveDate
- * 
+ *
  *     Property:
  *       type: object
  *       properties:
@@ -134,6 +158,9 @@ const router = Router();
  *           type: array
  *           items:
  *             $ref: '#/components/schemas/PricingHistory'
+ *         owner:
+ *           $ref: '#/components/schemas/User'
+ *           nullable: true
  *       required:
  *         - id
  *         - ownerId
@@ -142,7 +169,7 @@ const router = Router();
  *         - transactionType
  *         - price
  *         - address
- * 
+ *
  *     CreatePropertyInput:
  *       type: object
  *       properties:
@@ -197,7 +224,7 @@ const router = Router();
  *         - transactionType
  *         - price
  *         - address
- * 
+ *
  *     UpdatePropertyInput:
  *       type: object
  *       properties:
@@ -253,19 +280,47 @@ const router = Router();
  *     summary: Get all properties
  *     tags:
  *       - Properties
+ *     parameters:
+ *       - in: query
+ *         name: filter
+ *         schema:
+ *           type: string
+ *           enum: [active, sold_rented, inactive]
+ *         required: false
+ *         description: |
+ *           Filter properties by their status. Available options:
+ *           - `active`: Returns only properties with `status: active`.
+ *           - `sold_rented`: Returns properties with `status: sold` or `status: rented`.
+ *           - `inactive`: Returns only properties with `status: inactive`.
+ *           If not provided, all properties are returned regardless of status.
+ *         examples:
+ *           active:
+ *             summary: Filter active properties
+ *             value: active
+ *           sold_rented:
+ *             summary: Filter sold or rented properties
+ *             value: sold_rented
+ *           inactive:
+ *             summary: Filter inactive properties
+ *             value: inactive
+ *           all:
+ *             summary: Get all properties (no filter)
+ *             value: ''
  *     responses:
  *       200:
- *         description: List of properties
+ *         description: List of properties with relations (images, views, pricing history, and owner)
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Property'
+ *       400:
+ *         description: Invalid filter parameter
  *       500:
  *         description: Internal server error
  */
-router.get("/properties", getAllProperties);
+router.get("/properties", getProperties);
 
 /**
  * @swagger
@@ -295,7 +350,7 @@ router.get("/properties", getAllProperties);
  *       500:
  *         description: Internal server error
  */
-router.get("/properties/:propertyId", getCertainProperty);
+router.get("/properties/:propertyId", getProperty);
 
 /**
  * @swagger
