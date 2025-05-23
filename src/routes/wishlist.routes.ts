@@ -25,13 +25,13 @@ router.use(authMiddleware);
  * @swagger
  * /wishlist:
  *   get:
- *     summary: Get user wishlist
+ *     summary: Get user's wishlist with property details and images
  *     tags: [Wishlist]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: User wishlist items
+ *         description: List of properties in user's wishlist
  *         content:
  *           application/json:
  *             schema:
@@ -39,16 +39,56 @@ router.use(authMiddleware);
  *               items:
  *                 type: object
  *                 properties:
- *                   userId:
+ *                   id:
  *                     type: string
- *                     example: "user-123"
- *                   propertyId:
+ *                     format: uuid
+ *                   ownerId:
  *                     type: string
- *                     example: "property-456"
+ *                   isVerified:
+ *                     type: boolean
+ *                   title:
+ *                     type: string
+ *                   description:
+ *                     type: string
+ *                   propertyType:
+ *                     type: string
+ *                     enum: [house, apartment]
+ *                   transactionType:
+ *                     type: string
+ *                     enum: [sale, rent]
+ *                   price:
+ *                     type: number
+ *                     format: double
+ *                   currency:
+ *                     type: string
+ *                   size:
+ *                     type: number
+ *                   rooms:
+ *                     type: integer
+ *                   address:
+ *                     type: string
+ *                   status:
+ *                     type: string
+ *                     enum: [active, inactive, sold, rented]
+ *                   documentUrl:
+ *                     type: string
+ *                   verificationComments:
+ *                     type: string
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                   images:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                     description: Array of image URLs (primary image first)
  *       401:
  *         description: Unauthorized
  */
-router.get("/wishlist", getUserWishlist as RequestHandler);
+router.get("/wishlist", getUserWishlist);
 
 /**
  * @swagger
