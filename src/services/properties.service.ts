@@ -13,6 +13,8 @@ import {
   UpdatePropertyInput,
 } from "../types/properties.types";
 import { users } from "../db/schema/users.schema";
+import { wishlist } from "../db/schema/wishlist.schema";
+import { sendPriceChangeNotification } from "./email.service";
 
 export const getProperties = async (
   filterParam: string = "active",
@@ -225,6 +227,7 @@ export const deleteProperty = async (propertyId: string): Promise<void> => {
 
 export const updateProperty = async (
   propertyId: string,
+  userId: string,
   input: UpdatePropertyInput,
 ): Promise<PropertyWithRelations> => {
   const existingProperty = await db
@@ -252,6 +255,36 @@ export const updateProperty = async (
   }
   if (input.price !== undefined) {
     updateData.price = input.price;
+
+    if (existingProperty[0].price !== input.price) {
+      const [wishlistItem, user] = await Promise.all([
+        db
+          .select()
+          .from(wishlist)
+          .where(
+            and(
+              eq(wishlist.propertyId, propertyId),
+              eq(wishlist.userId, userId),
+            ),
+          )
+          .then((res) => res[0]),
+        db
+          .select({ id: users.id, email: users.email })
+          .from(users)
+          .where(eq(users.id, userId))
+          .then((res) => res[0]),
+      ]);
+
+      if (wishlistItem && user?.email) {
+        const propertyDetails = {
+          name: existingProperty[0].title,
+          address: existingProperty[0].address || "N/A",
+          oldPrice: existingProperty[0].price,
+          newPrice: input.price,
+        };
+        await sendPriceChangeNotification(user.email, propertyDetails);
+      }
+    }
   }
   if (input.currency !== undefined) {
     updateData.currency = input.currency;
