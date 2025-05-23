@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
+import { transform } from "typescript";
 
 dotenv.config();
 
@@ -27,4 +28,51 @@ export const sendVerificationEmail = async (to: string, token: string) => {
   };
 
   await transporter.sendMail(mailOptions);
+};
+
+export const sendPriceChangeNotification = async (
+  to: string,
+  property: any,
+) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER || "default@example.com",
+    to,
+    subject: `Price Change Notification for ${property.name || "Property"}`,
+    html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #333;">Price Change Notification</h1>
+          <p>Dear User,</p>
+          <p>We have detected a price change for the following property:</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>Property Name</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${property.name || "N/A"}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>Address</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${property.address || "N/A"}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>New Price</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">$${Number(property.newPrice || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>Previous Price</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">$${Number(property.oldPrice || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>Change</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd; color: ${property.newPrice > property.oldPrice ? "#e74c3c" : "#27ae60"};">
+                ${property.newPrice > property.oldPrice ? "Increased" : "Decreased"} by $${Math.abs(property.newPrice - property.oldPrice).toLocaleString()}
+              </td>
+            </tr>
+          </table>
+          <p>For more details, please visit our website.</p>
+          <p style="margin-top: 20px;">Best regards,<br>Your Company Name</p>
+        </div>
+      `,
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log(`Price change notification sent to ${to}`);
 };
