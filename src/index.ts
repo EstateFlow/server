@@ -24,7 +24,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/paypal", paypalRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/ai", aiRouter);
-app.use("/wishlist", wishlistRouter);
+app.use("/", wishlistRouter);
 app.use("/", propertiesRouter);
 app.use("/", userRouter);
 app.get("/", (req, res) => {
