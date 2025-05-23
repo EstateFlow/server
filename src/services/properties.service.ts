@@ -389,3 +389,13 @@ export const updateProperty = async (
     owner,
   };
 };
+
+export const verifyProperty = async (id: string) => {
+  const result = await db
+    .update(properties)
+    .set({ isVerified: true })
+    .where(eq(properties.id, id))
+    .returning();
+
+  return result[0];
+};

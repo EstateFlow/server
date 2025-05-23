@@ -127,3 +127,14 @@ export const updateProperty: ExpressHandler = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const verifyPropertyHandler = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const updated = await propertiesService.verifyProperty(id);
+  if (!updated) {
+    return res.status(404).json({ message: "Property not found" });
+  }
+
+  return res.status(200).json(updated);
+};

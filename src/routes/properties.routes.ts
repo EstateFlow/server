@@ -5,7 +5,9 @@ import {
   getProperty,
   getProperties,
   updateProperty,
+  verifyPropertyHandler,
 } from "../controllers/properties.controller";
+import { requireRole } from "../middleware/requireUserWithRole.middleware";
 
 const router = Router();
 
@@ -434,5 +436,42 @@ router.patch("/properties/:propertyId", updateProperty);
  *         description: Internal server error
  */
 router.delete("/properties/:propertyId", deleteProperty);
+
+/**
+ * @swagger
+ * /properties/{id}/verify:
+ *   patch:
+ *     summary: Mark property as verified
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Property ID
+ *     responses:
+ *       200:
+ *         description: Property verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Property'
+ *       403:
+ *         description: Forbidden (not admin/moderator)
+ *       404:
+ *         description: Property not found
+ */
+function asyncHandler(fn: any) {
+  return function (req: any, res: any, next: any) {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
+router.patch("/properties/:id/verify",
+  asyncHandler(requireRole(["admin", "moderator"])),
+  asyncHandler(verifyPropertyHandler)
+);
 
 export default router;
