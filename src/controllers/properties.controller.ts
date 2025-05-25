@@ -21,7 +21,10 @@ export const getProperties: ExpressHandler = async (req, res) => {
       return;
     }
 
-    const properties = await propertiesService.getProperties(filter ?? "");
+    const properties = await propertiesService.getProperties(
+      filter ?? "",
+      req.user?.userId,
+    );
     res.status(200).json(properties);
   } catch (error) {
     console.error("Error fetching properties:", error);
@@ -40,7 +43,10 @@ export const getProperty: ExpressHandler = async (req, res) => {
       return;
     }
 
-    const property = await propertiesService.getProperty(propertyId);
+    const property = await propertiesService.getProperty(
+      propertyId,
+      req.user?.userId,
+    );
     res.status(200).json(property);
   } catch (error: any) {
     console.error(`Error fetching property ${req.params.propertyId}:`, error);

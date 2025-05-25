@@ -24,7 +24,7 @@ router.use(authMiddleware);
 
 /**
  * @swagger
- * /ai/system-prompt:
+ * /api/ai/system-prompt:
  *   get:
  *     summary: Get default system prompt
  *     tags: [AI]
@@ -42,7 +42,7 @@ router.get("/system-prompt", getSystemPrompt);
 
 /**
  * @swagger
- * /ai/system-prompt:
+ * /api/ai/system-prompt:
  *   put:
  *     summary: Update default system prompt
  *     tags: [AI]
@@ -78,7 +78,7 @@ router.put("/system-prompt", updateSystemPrompt);
 
 /**
  * @swagger
- * /ai/conversations:
+ * /api/ai/conversations:
  *   post:
  *     summary: Create a new AI conversation
  *     tags: [AI]
@@ -107,7 +107,7 @@ router.post("/conversations", createConversation);
 
 /**
  * @swagger
- * /ai/conversations/history:
+ * /api/ai/conversations/history:
  *   get:
  *     summary: Get conversation history for current user
  *     tags: [AI]
@@ -125,7 +125,7 @@ router.get("/conversations/history", getConversationHistory);
 
 /**
  * @swagger
- * /ai/conversations/{conversationId}/messages:
+ * /api/ai/conversations/{conversationId}/messages:
  *   post:
  *     summary: Send a message to the AI in a conversation
  *     tags: [AI]

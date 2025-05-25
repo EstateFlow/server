@@ -5,7 +5,7 @@ const router = Router();
 
 /**
  * @swagger
- * /paypal/create-order:
+ * /api/paypal/create-order:
  *   post:
  *     summary: Create a PayPal order
  *     tags:
@@ -47,7 +47,7 @@ router.post("/create-order", async (req, res) => {
 
 /**
  * @swagger
- * /paypal/capture-order:
+ * /api/paypal/capture-order:
  *   post:
  *     summary: Capture a PayPal order
  *     tags:

@@ -21,12 +21,12 @@ app.use(cookieParser());
 app.use(express.json());
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.use("/paypal", paypalRouter);
+app.use("/api/paypal", paypalRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/ai", aiRouter);
-app.use("/", wishlistRouter);
-app.use("/", propertiesRouter);
-app.use("/", userRouter);
+app.use("/api/wishlist", wishlistRouter);
+app.use("/api/properties", propertiesRouter);
+app.use("/api/user", userRouter);
 app.get("/", (req, res) => {
   res.send("Hello, world!");
 });

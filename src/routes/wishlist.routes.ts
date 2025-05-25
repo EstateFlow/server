@@ -23,7 +23,7 @@ router.use(authMiddleware);
 
 /**
  * @swagger
- * /wishlist:
+ * /api/wishlist:
  *   get:
  *     summary: Get user's wishlist with property details and images
  *     tags: [Wishlist]
@@ -88,11 +88,11 @@ router.use(authMiddleware);
  *       401:
  *         description: Unauthorized
  */
-router.get("/wishlist", getUserWishlist);
+router.get("/", getUserWishlist);
 
 /**
  * @swagger
- * /wishlist:
+ * /api/wishlist:
  *   post:
  *     summary: Add an item to user wishlist
  *     tags: [Wishlist]
@@ -121,11 +121,11 @@ router.get("/wishlist", getUserWishlist);
  *       401:
  *         description: Unauthorized
  */
-router.post("/wishlist", postWishlistItem as RequestHandler);
+router.post("/", postWishlistItem as RequestHandler);
 
 /**
  * @swagger
- * /wishlist/{propertyId}:
+ * /api/wishlist/{propertyId}:
  *   delete:
  *     summary: Remove an item from user wishlist
  *     tags: [Wishlist]
@@ -146,7 +146,6 @@ router.post("/wishlist", postWishlistItem as RequestHandler);
  *       401:
  *         description: Unauthorized
  */
-router.delete("/wishlist/:propertyId", deleteWishlistItem as RequestHandler);
+router.delete("/:propertyId", deleteWishlistItem as RequestHandler);
 
 export default router;
-

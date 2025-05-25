@@ -8,6 +8,8 @@ import {
   verifyPropertyHandler,
 } from "../controllers/properties.controller";
 import { requireRole } from "../middleware/requireUserWithRole.middleware";
+import { authMiddleware } from "../middleware/auth.middleware";
+import { optionalAuthMiddleware } from "../middleware/optionalAuth.middleware";
 
 const router = Router();
 
@@ -29,14 +31,6 @@ const router = Router();
  *         role:
  *           type: string
  *           enum: [renter_buyer, private_seller, agency, moderator, admin]
- *         isEmailVerified:
- *           type: boolean
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
  *       required:
  *         - id
  *         - username
@@ -163,6 +157,9 @@ const router = Router();
  *         owner:
  *           $ref: '#/components/schemas/User'
  *           nullable: true
+ *         isWished:
+ *           type: boolean
+ *           description: Indicates if the property is in the authenticated user's wishlist. Always false for unauthenticated users.
  *       required:
  *         - id
  *         - ownerId
@@ -171,6 +168,7 @@ const router = Router();
  *         - transactionType
  *         - price
  *         - address
+ *         - isWished
  *
  *     CreatePropertyInput:
  *       type: object
@@ -277,7 +275,7 @@ const router = Router();
 
 /**
  * @swagger
- * /properties:
+ * /api/properties:
  *   get:
  *     summary: Get all properties
  *     tags:
@@ -322,11 +320,11 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.get("/properties", getProperties);
+router.get("/", optionalAuthMiddleware, getProperties);
 
 /**
  * @swagger
- * /properties/{propertyId}:
+ * /api/properties/{propertyId}:
  *   get:
  *     summary: Get a property by ID
  *     tags:
@@ -352,11 +350,11 @@ router.get("/properties", getProperties);
  *       500:
  *         description: Internal server error
  */
-router.get("/properties/:propertyId", getProperty);
+router.get("/:propertyId", optionalAuthMiddleware, getProperty);
 
 /**
  * @swagger
- * /properties:
+ * /api/properties:
  *   post:
  *     summary: Add a new property
  *     tags:
@@ -374,11 +372,11 @@ router.get("/properties/:propertyId", getProperty);
  *       500:
  *         description: Internal server error
  */
-router.post("/properties", addNewProperty);
+router.post("/", authMiddleware, addNewProperty);
 
 /**
  * @swagger
- * /properties/{propertyId}:
+ * /api/properties/{propertyId}:
  *   patch:
  *     summary: Update a property by ID
  *     tags:
@@ -407,11 +405,11 @@ router.post("/properties", addNewProperty);
  *       500:
  *         description: Internal server error
  */
-router.patch("/properties/:propertyId", updateProperty);
+router.patch("/:propertyId", authMiddleware, updateProperty);
 
 /**
  * @swagger
- * /properties/{propertyId}:
+ * /api/properties/{propertyId}:
  *   delete:
  *     summary: Delete a property by ID
  *     tags:
@@ -435,11 +433,11 @@ router.patch("/properties/:propertyId", updateProperty);
  *       500:
  *         description: Internal server error
  */
-router.delete("/properties/:propertyId", deleteProperty);
+router.delete("/:propertyId", authMiddleware, deleteProperty);
 
 /**
  * @swagger
- * /properties/{id}/verify:
+ * /api/properties/{id}/verify:
  *   patch:
  *     summary: Mark property as verified
  *     tags: [Properties]
@@ -469,9 +467,10 @@ function asyncHandler(fn: any) {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 }
-router.patch("/properties/:id/verify",
+router.patch(
+  "/:id/verify",
   asyncHandler(requireRole(["admin", "moderator"])),
-  asyncHandler(verifyPropertyHandler)
+  asyncHandler(verifyPropertyHandler),
 );
 
 export default router;
