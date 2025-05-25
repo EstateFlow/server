@@ -67,11 +67,15 @@ export const addNewProperty: ExpressHandler = async (req, res) => {
       ...propertyData,
     });
     res.status(201).json(newProperty);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error adding property:", error);
-    const message =
-      error instanceof Error ? error.message : "Internal server error";
-    res.status(500).json({ error: message });
+    if (error.message === "Listings limit reached") {
+      res.status(403).json({ message: "Listings limit reached" });
+    } else {
+      res
+        .status(500)
+        .json({ message: error.message || "Internal server error" });
+    }
   }
 };
 

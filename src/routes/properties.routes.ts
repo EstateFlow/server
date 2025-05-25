@@ -369,6 +369,8 @@ router.get("/:propertyId", optionalAuthMiddleware, getProperty);
  *     responses:
  *       201:
  *         description: Property created successfully
+ *       403:
+ *         description: Listings limit reached
  *       500:
  *         description: Internal server error
  */
