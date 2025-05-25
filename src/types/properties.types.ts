@@ -3,19 +3,25 @@ import { properties } from "../db/schema/properties.schema";
 import { propertyImages } from "../db/schema/property_images.schema";
 import { propertyViews } from "../db/schema/property_views.schema";
 import { pricingHistory } from "../db/schema/pricing_history.schema";
-import { users } from "../db/schema/users.schema";
 
 export type Property = InferSelectModel<typeof properties>;
 export type PropertyImage = InferSelectModel<typeof propertyImages>;
 export type PropertyView = InferSelectModel<typeof propertyViews>;
 export type PricingHistory = InferSelectModel<typeof pricingHistory>;
-export type User = InferSelectModel<typeof users>;
+
+type User = {
+  id: string;
+  email: string;
+  username: string;
+  role: string;
+};
 
 export interface PropertyWithRelations extends Property {
   images: PropertyImage[];
   views: PropertyView[];
   pricingHistory: PricingHistory[];
   owner: User | null;
+  isWished: boolean;
 }
 
 export interface CreatePropertyInput {

@@ -16,7 +16,7 @@ const router = Router();
 
 /**
  * @swagger
- * /user:
+ * /api/user:
  *   get:
  *     summary: Get current authenticated user
  *     tags: [User]
@@ -45,6 +45,6 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.get("/user", authMiddleware, getUser);
+router.get("/", authMiddleware, getUser);
 
 export default router;
