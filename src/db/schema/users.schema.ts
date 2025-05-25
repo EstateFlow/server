@@ -4,6 +4,7 @@ import {
   uuid,
   boolean,
   timestamp,
+  integer,
   pgEnum,
 } from "drizzle-orm/pg-core";
 
@@ -23,6 +24,7 @@ export const users = pgTable("users", {
   role: roleEnum("role").notNull(),
   isEmailVerified: boolean("is_email_verified").default(false),
   paypalCredentials: text("paypal_credentials"),
+  listingLimit: integer("listing_limit"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });

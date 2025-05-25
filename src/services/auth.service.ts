@@ -51,10 +51,23 @@ export const register = async ({
   const passwordHash = await hashPassword(password);
   const verificationToken = uuidv4();
 
-  const userResult = await db
-    .insert(users)
-    .values({ username, email, passwordHash, role })
-    .returning();
+  let userResult;
+  if (role === "renter_buyer") {
+    userResult = await db
+      .insert(users)
+      .values({ username, email, passwordHash, role, listingLimit: 5 })
+      .returning();
+  } else if (role === "agency") {
+    userResult = await db
+      .insert(users)
+      .values({ username, email, passwordHash, role, listingLimit: 1000 })
+      .returning();
+  } else {
+    userResult = await db
+      .insert(users)
+      .values({ username, email, passwordHash, role, listingLimit: -1 })
+      .returning();
+  }
 
   const user: User = userResult[0];
   const userId = user.id;

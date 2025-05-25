@@ -10,6 +10,9 @@ export const getUser = async (userId: string) => {
       username: users.username,
       role: users.role,
       isEmailVerified: users.isEmailVerified,
+      listingLimit: users.listingLimit,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
     })
     .from(users)
     .where(eq(users.id, userId))
@@ -27,5 +30,8 @@ export const getUser = async (userId: string) => {
     username: user.username,
     role: user.role,
     isEmailVerified: user.isEmailVerified,
+    listingLimit: user.listingLimit,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
   };
 };

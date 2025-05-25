@@ -226,6 +226,25 @@ export const getProperty = async (
 };
 
 export const addNewProperty = async (input: CreatePropertyInput) => {
+  const user = await db
+    .select({
+      role: users.role,
+      listingLimit: users.listingLimit,
+    })
+    .from(users)
+    .where(eq(users.id, input.ownerId))
+    .limit(1);
+
+  if (!user[0]) {
+    throw new Error("User not found");
+  }
+
+  const { role, listingLimit } = user[0];
+
+  if (role === "private_seller" && listingLimit !== null && listingLimit <= 0) {
+    throw new Error("Listings limit reached");
+  }
+
   const newProperty = await db
     .insert(properties)
     .values({
@@ -246,6 +265,18 @@ export const addNewProperty = async (input: CreatePropertyInput) => {
     .returning();
 
   const property = newProperty[0];
+  const owner = await db
+    .select({ role: users.role, listingLimit: users.listingLimit })
+    .from(users)
+    .where(eq(users.id, input.ownerId));
+  const ownerData = owner[0];
+
+  if (role === "private_seller" && listingLimit === 0) {
+    await db
+      .update(users)
+      .set({ listingLimit: listingLimit - 1 })
+      .where(eq(users.id, input.ownerId));
+  }
 
   let images: PropertyImage[] = [];
   if (input.images && input.images.length > 0) {

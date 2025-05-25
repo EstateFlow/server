@@ -40,6 +40,14 @@ const router = Router();
  *                   type: string
  *                 isEmailVerified:
  *                   type: boolean
+ *                 listingLimit:
+ *                   type: integer
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
  *       401:
  *         description: Unauthorized – token missing or invalid
  *       500:
