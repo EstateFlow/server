@@ -42,7 +42,7 @@ export const getPropertyCountByRegion = async (
         FROM ${properties}
         WHERE created_at BETWEEN ${startDate} AND ${endDate}
         AND address ILIKE '%' || ${region} || '%'
-      `
+      `,
     );
 
     const total = (res as any).rows?.[0]?.total ?? 0;
@@ -53,10 +53,7 @@ export const getPropertyCountByRegion = async (
   return results;
 };
 
-export const getPriceStatsByRegion = async (
-  startDate: Date,
-  endDate: Date,
-) => {
+export const getPriceStatsByRegion = async (startDate: Date, endDate: Date) => {
   const results: {
     region: string;
     min: number | null;
@@ -74,7 +71,7 @@ export const getPriceStatsByRegion = async (
         FROM ${properties}
         WHERE created_at BETWEEN ${startDate} AND ${endDate}
         AND address ILIKE '%' || ${region} || '%'
-      `
+      `,
     );
 
     const row = (res as any).rows?.[0];
@@ -90,11 +87,10 @@ export const getPriceStatsByRegion = async (
   return results;
 };
 
-
 export const getTopRegions = async (
   startDate: Date,
   endDate: Date,
-  limit = 5
+  limit = 5,
 ) => {
   const counts = [];
 
@@ -105,7 +101,7 @@ export const getTopRegions = async (
         FROM ${properties}
         WHERE created_at BETWEEN ${startDate} AND ${endDate}
         AND address ILIKE '%' || ${region} || '%'
-      `
+      `,
     );
 
     const total = (res as any).rows?.[0]?.total ?? 0;
@@ -116,7 +112,6 @@ export const getTopRegions = async (
 
   return counts.slice(0, limit);
 };
-
 
 export const getAveragePriceGrowth = async (
   previousStart: Date,
@@ -138,7 +133,7 @@ export const getAveragePriceGrowth = async (
         FROM ${properties}
         WHERE created_at BETWEEN ${previousStart} AND ${previousEnd}
         AND address ILIKE '%' || ${region} || '%'
-      `
+      `,
     );
     const previousAvg = (prevRes as any).rows?.[0]?.avg_price ?? null;
 
@@ -148,7 +143,7 @@ export const getAveragePriceGrowth = async (
         FROM ${properties}
         WHERE created_at BETWEEN ${currentStart} AND ${currentEnd}
         AND address ILIKE '%' || ${region} || '%'
-      `
+      `,
     );
     const currentAvg = (currRes as any).rows?.[0]?.avg_price ?? null;
 
@@ -162,3 +157,4 @@ export const getAveragePriceGrowth = async (
 
   return results;
 };
+

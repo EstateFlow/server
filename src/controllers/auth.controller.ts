@@ -90,14 +90,16 @@ export const refreshToken: ExpressHandler = async (req, res) => {
 
 export const googleAuth: ExpressHandler = async (req, res) => {
   try {
-    const { code } = req.body;
+    const { code, role } = req.body;
 
-    if (!code) {
-      res.status(400).json({ message: "Authorization code is required" });
+    if (!code || !role) {
+      res
+        .status(400)
+        .json({ message: "Authorization code and role are required" });
       return;
     }
     const { accessToken, refreshToken, isNewUser } =
-      await authService.googleAuth(code);
+      await authService.googleAuth(code, role);
 
     res.json({
       accessToken,
@@ -114,13 +116,15 @@ export const googleAuth: ExpressHandler = async (req, res) => {
 
 export const facebookAuth: ExpressHandler = async (req, res) => {
   try {
-    const { code } = req.body;
-    if (!code) {
-      res.status(400).json({ message: "Authorization code is required" });
+    const { code, role } = req.body;
+    if (!code || !role) {
+      res
+        .status(400)
+        .json({ message: "Authorization code and role are required" });
       return;
     }
 
-    const result = await authService.facebookAuth(code);
+    const result = await authService.facebookAuth(code, role);
 
     res.json({
       accessToken: result.accessToken,
