@@ -5,6 +5,7 @@ import {
   updateSystemPrompt,
   getConversationHistory,
   sendMessage,
+  getVisibleConversationHistory,
 } from "../controllers/ai.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
 
@@ -379,12 +380,88 @@ router.post("/conversations", createConversation);
  *                         type: string
  *                         format: date-time
  *                         description: Creation timestamp
+ *                       isVisible:
+ *                         type: boolean
+ *                         description: Indicates if the message should be displayed to the user
  *             example:
  *               messages:
  *                 - id: "123e4567-e89b-12d3-a456-426614174000"
  *                   sender: "system"
  *                   content: "You are a helpful AI assistant for property analysis.\n\n### Available Properties:\n- ID: 123..."
  *                   createdAt: "2025-05-26T18:20:00Z"
+ *                   isVisible: false
+ *                 - id: "456e7890-e89b-12d3-a456-426614174000"
+ *                   sender: "user"
+ *                   content: "Can you analyze property with ID 123?"
+ *                   createdAt: "2025-05-26T18:21:00Z"
+ *                   isVisible: true
+ *                 - id: "789e1234-e89b-12d3-a456-426614174000"
+ *                   sender: "ai"
+ *                   content: "The property with ID 123 is a 3-bedroom apartment..."
+ *                   createdAt: "2025-05-26T18:21:30Z"
+ *                   isVisible: true
+ *       404:
+ *         description: User or active conversation not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No active conversation found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+router.get("/conversations/history", getConversationHistory);
+
+/**
+ * @swagger
+ * /api/ai/conversations/visible-history:
+ *   get:
+ *     summary: Retrieve visible conversation history for the current user
+ *     description: Fetches the message history of the active conversation for the authenticated user, including only messages with isVisible set to true, ordered by creation time.
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Visible conversation history retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 messages:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                         description: Unique identifier of the message
+ *                       sender:
+ *                         type: string
+ *                         enum: [user, ai, system]
+ *                         description: Sender of the message
+ *                       content:
+ *                         type: string
+ *                         description: Content of the message
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         description: Creation timestamp
+ *             example:
+ *               messages:
  *                 - id: "456e7890-e89b-12d3-a456-426614174000"
  *                   sender: "user"
  *                   content: "Can you analyze property with ID 123?"
@@ -414,24 +491,17 @@ router.post("/conversations", createConversation);
  *                   type: string
  *                   example: "Internal server error"
  */
-router.get("/conversations/history", getConversationHistory);
+router.get("/conversations/visible-history", getVisibleConversationHistory);
 
 /**
  * @swagger
- * /api/ai/conversations/{conversationId}/messages:
+ * /api/ai/conversations/messages:
  *   post:
  *     summary: Send a message to the AI in a conversation
  *     description: Sends a user message to the AI in the specified conversation and returns the user's message and the AI's response.
  *     tags: [AI]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: conversationId
- *         required: true
- *         schema:
- *           type: string
- *         description: ID of the conversation
  *     requestBody:
  *       required: true
  *       content:
@@ -563,6 +633,6 @@ router.get("/conversations/history", getConversationHistory);
  *                   type: string
  *                   example: "Internal server error"
  */
-router.post("/conversations/:conversationId/messages", sendMessage);
+router.post("/conversations/messages", sendMessage);
 
 export default router;
