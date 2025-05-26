@@ -9,6 +9,7 @@ import propertiesRouter from "./routes/properties.routes";
 import paypalRouter from "./routes/paypal.routes";
 import aiRouter from "./routes/ai.routes";
 import wishlistRouter from "./routes/wishlist.routes";
+import statsRouter from "./routes/statistics.routes";
 import { initializeDefaultPrompt } from "./utils/ai.utils";
 import userRouter from "./routes/user.routes";
 
@@ -25,6 +26,7 @@ app.use("/api/paypal", paypalRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/wishlist", wishlistRouter);
+app.use("/api/stats", statsRouter);
 app.use("/api/properties", propertiesRouter);
 app.use("/api/user", userRouter);
 app.get("/", (req, res) => {
