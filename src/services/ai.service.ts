@@ -222,9 +222,52 @@ export const getConversationHistory = async (userId: string) => {
       sender: messages.sender,
       content: messages.content,
       createdAt: messages.createdAt,
+      isVisible: messages.isVisible,
     })
     .from(messages)
     .where(eq(messages.conversationId, conversationId))
+    .orderBy(messages.createdAt);
+
+  return { messages: messageHistory };
+};
+
+export const getVisibleConversationHistory = async (userId: string) => {
+  const user = await db
+    .select({ userId: users.id })
+    .from(users)
+    .where(eq(users.id, userId));
+
+  if (user.length === 0) {
+    throw new Error("User with this id does not exist");
+  }
+
+  const conversation = await db
+    .select()
+    .from(conversations)
+    .where(
+      and(eq(conversations.userId, userId), eq(conversations.isActive, true)),
+    );
+
+  if (conversation.length === 0) {
+    throw new Error("No active conversation found");
+  }
+
+  const conversationId = conversation[0].id;
+
+  const messageHistory = await db
+    .select({
+      id: messages.id,
+      sender: messages.sender,
+      content: messages.content,
+      createdAt: messages.createdAt,
+    })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        eq(messages.isVisible, true),
+      ),
+    )
     .orderBy(messages.createdAt);
 
   return { messages: messageHistory };
@@ -256,6 +299,10 @@ export const sendMessage = async (userId: string, message: string) => {
     isVisible: true,
   };
   await db.insert(messages).values(userMessage);
+  await db
+    .update(conversations)
+    .set({ updatedAt: new Date() })
+    .where(eq(conversations.id, conversation.id));
 
   let chat = activeChatSessions.get(conversation.id);
   if (!chat) {
@@ -308,6 +355,10 @@ export const sendMessage = async (userId: string, message: string) => {
   };
 
   await db.insert(messages).values(aiResponse);
+  await db
+    .update(conversations)
+    .set({ updatedAt: new Date() })
+    .where(eq(conversations.id, conversation.id));
   return {
     userMessage,
     aiResponse,
