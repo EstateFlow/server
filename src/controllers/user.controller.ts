@@ -29,6 +29,27 @@ export const getUser: ExpressHandler = async (req, res) => {
   }
 };
 
+export const getUserById: ExpressHandler = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    if (!userId) {
+      res.status(400).json({ message: "Bad Request: User ID is required" });
+      return;
+    }
+
+    const user = await userService.getUserById(userId);
+    res.status(200).json(user);
+  } catch (error: any) {
+    console.error("Error in getUserById:", error);
+    if (error.message === "User not found") {
+      res.status(404).json({ message: "User not found" });
+    } else {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+};
+
 export const updateUser: ExpressHandler = async (req, res) => {
   const userId = req.user?.userId;
 
@@ -51,3 +72,4 @@ export const updateUser: ExpressHandler = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+

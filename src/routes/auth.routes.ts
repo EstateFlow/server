@@ -1,10 +1,4 @@
-import {
-  Router,
-  Request,
-  Response,
-  NextFunction,
-  RequestHandler,
-} from "express";
+import { Router } from "express";
 import {
   facebookAuth,
   googleAuth,
@@ -13,16 +7,8 @@ import {
   register,
   verifyEmail,
 } from "../controllers/auth.controller";
-import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
-
-interface AuthRequest extends Request {
-  user?: {
-    userId: string;
-    email: string;
-  };
-}
 
 /**
  * @swagger
@@ -207,6 +193,10 @@ router.post("/refresh-token", refreshToken);
  *             properties:
  *               code:
  *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [renter_buyer, private_seller, agency, moderator, admin]
+ *                 description: Role of the user
  *     responses:
  *       200:
  *         description: Google authentication successful
@@ -248,6 +238,11 @@ router.post("/google", googleAuth);
  *             properties:
  *               code:
  *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [renter_buyer, private_seller, agency, moderator, admin]
+ *                 description: Role of the user
+
  *     responses:
  *       200:
  *         description: Facebook authentication successful
