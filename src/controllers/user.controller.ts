@@ -28,3 +28,26 @@ export const getUser: ExpressHandler = async (req, res) => {
     }
   }
 };
+
+export const updateUser: ExpressHandler = async (req, res) => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const { username, avatarUrl, bio } = req.body;
+
+  try {
+    const updatedUser = await userService.updateUser(userId as string, {
+      username,
+      avatarUrl,
+      bio,
+    });
+
+    res.status(200).json(updatedUser);
+  } catch (error: any) {
+    console.error("Error in updateUser:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
