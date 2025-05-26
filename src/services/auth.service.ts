@@ -25,6 +25,7 @@ import {
   RefreshTokenResult,
   GoogleAuthResult,
   FacebookAuthResult,
+  Role,
 } from "../types/auth.types";
 
 export const register = async ({
@@ -211,7 +212,10 @@ export const refreshToken = async ({
   return { accessToken, refreshToken: newRefreshToken };
 };
 
-export const googleAuth = async (code: string): Promise<GoogleAuthResult> => {
+export const googleAuth = async (
+  code: string,
+  role: Role,
+): Promise<GoogleAuthResult> => {
   try {
     const tokenResponse = await axios.post(
       "https://oauth2.googleapis.com/token",
@@ -255,7 +259,7 @@ export const googleAuth = async (code: string): Promise<GoogleAuthResult> => {
           email,
           isEmailVerified: true,
           username: email.split("@")[0],
-          role: "renter_buyer",
+          role,
         })
         .returning();
       userId = userResult[0].id;
@@ -306,6 +310,7 @@ export const googleAuth = async (code: string): Promise<GoogleAuthResult> => {
 
 export const facebookAuth = async (
   code: string,
+  role: Role,
 ): Promise<FacebookAuthResult> => {
   try {
     if (!code) {
@@ -361,7 +366,7 @@ export const facebookAuth = async (
           email,
           isEmailVerified: true,
           username: email.split("@")[0],
-          role: "renter_buyer",
+          role: role,
         })
         .returning();
       userId = userResult[0].id;
