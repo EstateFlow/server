@@ -44,6 +44,8 @@ export const register = async ({
     .select()
     .from(users)
     .where(eq(users.email, email));
+  console.log("service");
+  console.log(existingUser[0]);
 
   if (existingUser.length > 0) {
     throw new Error("User already exists");
@@ -214,7 +216,7 @@ export const refreshToken = async ({
 
 export const googleAuth = async (
   code: string,
-  role: Role,
+  role?: Role,
 ): Promise<GoogleAuthResult> => {
   try {
     const tokenResponse = await axios.post(
@@ -245,6 +247,7 @@ export const googleAuth = async (
       .select({
         id: users.id,
         isEmailVerified: users.isEmailVerified,
+        role: users.role,
       })
       .from(users)
       .where(eq(users.email, email));
@@ -252,7 +255,18 @@ export const googleAuth = async (
     let userId: string;
     let isNewUser = false;
 
+    let existingGoogleCredential = await db
+      .select({
+        userId: googleOAuthCredentials.userId,
+      })
+      .from(googleOAuthCredentials)
+      .where(eq(googleOAuthCredentials.googleId, google_id));
+
     if (userResult.length === 0) {
+      if (!role) {
+        throw new Error("Role is required for new user registration");
+      }
+
       const userResult = await db
         .insert(users)
         .values({
@@ -266,6 +280,21 @@ export const googleAuth = async (
       isNewUser = true;
     } else {
       userId = userResult[0].id;
+
+      if (
+        existingGoogleCredential.length > 0 &&
+        existingGoogleCredential[0].userId !== userId
+      ) {
+        throw new Error(
+          "This Google account is already linked to another user",
+        );
+      }
+
+      if (role && userResult[0].role !== role) {
+        throw new Error(
+          `Account already exists with a different role: ${userResult[0].role}`,
+        );
+      }
       await db
         .update(users)
         .set({ isEmailVerified: true })
@@ -304,13 +333,13 @@ export const googleAuth = async (
     };
   } catch (error) {
     console.error("Error in googleAuth:", error);
-    throw new Error("Google authentication failed");
+    throw error;
   }
 };
 
 export const facebookAuth = async (
   code: string,
-  role: Role,
+  role?: Role,
 ): Promise<FacebookAuthResult> => {
   try {
     if (!code) {
@@ -344,14 +373,11 @@ export const facebookAuth = async (
 
     const { id: facebook_id, email } = userInfoResponse.data;
 
-    if (!email) {
-      throw new Error("Email not provided by Facebook");
-    }
-
     let userResult = await db
       .select({
         id: users.id,
         isEmailVerified: users.isEmailVerified,
+        role: users.role,
       })
       .from(users)
       .where(eq(users.email, email));
@@ -359,7 +385,18 @@ export const facebookAuth = async (
     let userId: string;
     let isNewUser = false;
 
+    let existingFacebookCredential = await db
+      .select({
+        userId: facebookOAuthCredentials.userId,
+      })
+      .from(facebookOAuthCredentials)
+      .where(eq(facebookOAuthCredentials.facebookId, facebook_id));
+
     if (userResult.length === 0) {
+      if (!role) {
+        throw new Error("Role is required for new user registration");
+      }
+
       const userResult = await db
         .insert(users)
         .values({
@@ -373,6 +410,22 @@ export const facebookAuth = async (
       isNewUser = true;
     } else {
       userId = userResult[0].id;
+
+      if (
+        existingFacebookCredential.length > 0 &&
+        existingFacebookCredential[0].userId !== userId
+      ) {
+        throw new Error(
+          "This Facebook account is already linked to another user",
+        );
+      }
+
+      if (role && userResult[0].role !== role) {
+        throw new Error(
+          `Account already exists with a different role: ${userResult[0].role}`,
+        );
+      }
+
       await db
         .update(users)
         .set({ isEmailVerified: true })
@@ -412,12 +465,7 @@ export const facebookAuth = async (
       isNewUser,
     };
   } catch (error: any) {
-    console.error(
-      "Service - Facebook auth error:",
-      error.response?.data || error.message,
-    );
-    throw new Error(
-      `Facebook authentication failed: ${error.response?.data?.error?.message || error.message}`,
-    );
+    console.error("Error in facebookAuth:", error);
+    throw error;
   }
 };
