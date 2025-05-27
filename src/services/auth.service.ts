@@ -14,6 +14,7 @@ import { sendVerificationEmail } from "../services/email.service";
 import { refreshTokens } from "../db/schema/refresh_tokens.schema";
 import { googleOAuthCredentials } from "../db/schema/google_oauth_credentials.schema";
 import { facebookOAuthCredentials } from "../db/schema/facebook_oauth_credentials.schema";
+import bcrypt from "bcrypt";
 
 import {
   User,
@@ -178,22 +179,28 @@ export const login = async ({
 export const refreshToken = async ({
   refreshToken,
 }: RefreshTokenInput): Promise<RefreshTokenResult> => {
-  const tokenResult = await db
-    .select({ userId: refreshTokens.userId })
+  const tokenResults = await db
+    .select({ userId: refreshTokens.userId, token: refreshTokens.token })
     .from(refreshTokens)
     .where(
       and(
-        eq(refreshTokens.token, refreshToken),
         gt(refreshTokens.expiresAt, new Date()),
         eq(refreshTokens.revoked, false),
       ),
     );
 
-  if (!tokenResult.length) {
+  let userId: string | null = null;
+  for (const tokenResult of tokenResults) {
+    if (await bcrypt.compare(refreshToken, tokenResult.token)) {
+      userId = tokenResult.userId;
+      break;
+    }
+  }
+
+  if (!userId) {
     throw new Error("Invalid or expired refresh token");
   }
 
-  const userId = tokenResult[0].userId;
   const user = await db
     .select({ email: users.email })
     .from(users)
@@ -206,7 +213,13 @@ export const refreshToken = async ({
   await db
     .update(refreshTokens)
     .set({ revoked: true })
-    .where(eq(refreshTokens.token, refreshToken));
+    .where(
+      and(
+        eq(refreshTokens.userId, userId),
+        gt(refreshTokens.expiresAt, new Date()),
+        eq(refreshTokens.revoked, false),
+      ),
+    );
 
   const accessToken = generateJwt(userId, user[0].email);
   const newRefreshToken = await generateRefreshToken(userId);
