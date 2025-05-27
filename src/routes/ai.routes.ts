@@ -383,6 +383,9 @@ router.post("/conversations", createConversation);
  *                       isVisible:
  *                         type: boolean
  *                         description: Indicates if the message should be displayed to the user
+ *                       index:
+ *                         type: integer
+ *                         description: Sequential order of the message in the conversation
  *             example:
  *               messages:
  *                 - id: "123e4567-e89b-12d3-a456-426614174000"
@@ -390,16 +393,19 @@ router.post("/conversations", createConversation);
  *                   content: "You are a helpful AI assistant for property analysis.\n\n### Available Properties:\n- ID: 123..."
  *                   createdAt: "2025-05-26T18:20:00Z"
  *                   isVisible: false
+ *                   index: 0
  *                 - id: "456e7890-e89b-12d3-a456-426614174000"
  *                   sender: "user"
  *                   content: "Can you analyze property with ID 123?"
  *                   createdAt: "2025-05-26T18:21:00Z"
  *                   isVisible: true
+ *                   index: 1
  *                 - id: "789e1234-e89b-12d3-a456-426614174000"
  *                   sender: "ai"
  *                   content: "The property with ID 123 is a 3-bedroom apartment..."
  *                   createdAt: "2025-05-26T18:21:30Z"
  *                   isVisible: true
+ *                   index: 2
  *       404:
  *         description: User or active conversation not found
  *         content:
@@ -460,16 +466,21 @@ router.get("/conversations/history", getConversationHistory);
  *                         type: string
  *                         format: date-time
  *                         description: Creation timestamp
+ *                       index:
+ *                         type: integer
+ *                         description: Sequential order of the message in the conversation
  *             example:
  *               messages:
  *                 - id: "456e7890-e89b-12d3-a456-426614174000"
  *                   sender: "user"
  *                   content: "Can you analyze property with ID 123?"
  *                   createdAt: "2025-05-26T18:21:00Z"
+ *                   index: 0
  *                 - id: "789e1234-e89b-12d3-a456-426614174000"
  *                   sender: "ai"
  *                   content: "The property with ID 123 is a 3-bedroom apartment..."
  *                   createdAt: "2025-05-26T18:21:30Z"
+ *                   index: 1
  *       404:
  *         description: User or active conversation not found
  *         content:
@@ -551,6 +562,10 @@ router.get("/conversations/visible-history", getVisibleConversationHistory);
  *                     isVisible:
  *                       type: boolean
  *                       description: Indicates if the message is visible
+ *                     index:
+ *                       type: integer
+ *                       description: Sequential order of the message in the conversation
+
  *                 aiResponse:
  *                   type: object
  *                   properties:
@@ -576,6 +591,9 @@ router.get("/conversations/visible-history", getVisibleConversationHistory);
  *                     isVisible:
  *                       type: boolean
  *                       description: Indicates if the message is visible
+ *                     index:
+ *                       type: integer
+ *                       description: Sequential order of the message in the conversation
  *             example:
  *               message: "Message sent successfully"
  *               userMessage:
@@ -585,6 +603,7 @@ router.get("/conversations/visible-history", getVisibleConversationHistory);
  *                 content: "Give me best house ever"
  *                 createdAt: "2025-05-26T18:21:00Z"
  *                 isVisible: true
+ *                 index: 3
  *               aiResponse:
  *                 id: "789e1234-e89b-12d3-a456-426614174000"
  *                 conversationId: "456e7890-e89b-12d3-a456-426614174000"
@@ -592,6 +611,7 @@ router.get("/conversations/visible-history", getVisibleConversationHistory);
  *                 content: "This 3-bedroom apartment..."
  *                 createdAt: "2025-05-26T18:21:30Z"
  *                 isVisible: true
+ *               index: 4
  *       400:
  *         description: Missing required fields
  *         content:
