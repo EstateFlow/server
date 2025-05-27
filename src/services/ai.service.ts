@@ -228,7 +228,14 @@ export const getConversationHistory = async (userId: string) => {
     .where(eq(messages.conversationId, conversationId))
     .orderBy(messages.createdAt);
 
-  return { messages: messageHistory };
+  const indexedHistory = messageHistory.map((message, index) => {
+    return {
+      ...message,
+      index: index,
+    };
+  });
+
+  return { messages: indexedHistory };
 };
 
 export const getVisibleConversationHistory = async (userId: string) => {
@@ -270,7 +277,14 @@ export const getVisibleConversationHistory = async (userId: string) => {
     )
     .orderBy(messages.createdAt);
 
-  return { messages: messageHistory };
+  const indexedHistory = messageHistory.map((message, index) => {
+    return {
+      ...message,
+      index: index,
+    };
+  });
+
+  return { messages: indexedHistory };
 };
 
 export const sendMessage = async (userId: string, message: string) => {
@@ -290,6 +304,10 @@ export const sendMessage = async (userId: string, message: string) => {
     throw new Error("No active conversation found");
   }
 
+  const { messages: messageHistory } = await getConversationHistory(userId);
+
+  const userMessageIndex = messageHistory.length - 1;
+
   const userMessage = {
     id: uuidv4(),
     conversationId: conversation.id,
@@ -306,8 +324,6 @@ export const sendMessage = async (userId: string, message: string) => {
 
   let chat = activeChatSessions.get(conversation.id);
   if (!chat) {
-    const { messages: messageHistory } = await getConversationHistory(userId);
-
     const history = [];
     for (const msg of messageHistory) {
       if (msg.sender === "system") {
@@ -345,13 +361,16 @@ export const sendMessage = async (userId: string, message: string) => {
   const text = response.text();
   console.log("AI Response:", text);
 
+  const aiResponseIndex = userMessageIndex + 1;
+
   const aiResponse = {
     id: uuidv4(),
     conversationId: conversation.id,
     sender: "ai" as const,
-    content: response.text as string,
+    content: text,
     createdAt: new Date(),
     isVisible: true,
+    index: aiResponseIndex,
   };
 
   await db.insert(messages).values(aiResponse);
@@ -360,7 +379,13 @@ export const sendMessage = async (userId: string, message: string) => {
     .set({ updatedAt: new Date() })
     .where(eq(conversations.id, conversation.id));
   return {
-    userMessage,
-    aiResponse,
+    userMessage: {
+      ...userMessage,
+      index: userMessageIndex,
+    },
+    aiResponse: {
+      ...aiResponse,
+      index: aiResponseIndex,
+    },
   };
 };
