@@ -1,6 +1,7 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
 import * as statsService from "../services/statistics.service";
+import { getPropertyViewStatsByDate } from '../services/statistics.service';
 
 const parseDate = (date: unknown): Date | null => {
   if (typeof date !== "string") return null;
@@ -65,4 +66,25 @@ export const averagePriceGrowth = async (req: AuthRequest, res: Response): Promi
     currentEnd
   );
   res.json(data);
+};
+
+export const getPropertyViewsByDate = async (req: AuthRequest, res: Response) => {
+  const { propertyId } = req.params;
+  const { startDate, endDate } = req.query;
+
+  if (!startDate || !endDate) {
+    res.status(400).json({ message: 'Missing startDate or endDate' });
+    return;
+  }
+
+  const start = new Date(startDate as string);
+  const end = new Date(endDate as string);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ message: 'Invalid date format' });
+    return;
+  }
+
+  const views = await getPropertyViewStatsByDate(propertyId, start, end);
+  res.json({ propertyId, views });
 };
