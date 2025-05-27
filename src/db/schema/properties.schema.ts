@@ -28,6 +28,7 @@ export const properties = pgTable("properties", {
   isVerified: boolean("is_verified").default(false),
   title: text("title").notNull(),
   description: text("description"),
+  facilities: text("facilities"),
   propertyType: propertyTypeEnum("property_type").notNull(),
   transactionType: transactionTypeEnum("transaction_type").notNull(),
   price: numeric("price", { precision: 12, scale: 2 }).notNull(),

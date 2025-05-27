@@ -50,6 +50,8 @@ router.use(authMiddleware);
  *                     type: string
  *                   description:
  *                     type: string
+ *                   facilities:
+ *                     type: string
  *                   propertyType:
  *                     type: string
  *                     enum: [house, apartment]

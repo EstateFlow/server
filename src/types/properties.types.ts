@@ -28,6 +28,7 @@ export interface CreatePropertyInput {
   ownerId: string;
   title: string;
   description?: string;
+  facilities?: string;
   propertyType: "house" | "apartment";
   transactionType: "sale" | "rent";
   price: string;
@@ -44,6 +45,7 @@ export interface CreatePropertyInput {
 export interface UpdatePropertyInput {
   title?: string;
   description?: string;
+  facilities?: string;
   propertyType?: "house" | "apartment";
   transactionType?: "sale" | "rent";
   price?: string;

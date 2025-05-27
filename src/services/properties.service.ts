@@ -251,6 +251,7 @@ export const addNewProperty = async (input: CreatePropertyInput) => {
       ownerId: input.ownerId,
       title: input.title,
       description: input.description,
+      facilities: input.facilities,
       propertyType: input.propertyType,
       transactionType: input.transactionType,
       price: input.price,
@@ -350,6 +351,9 @@ export const updateProperty = async (
   }
   if (input.description !== undefined) {
     updateData.description = input.description;
+  }
+  if (input.facilities !== undefined) {
+    updateData.facilities = input.facilities;
   }
   if (input.propertyType !== undefined) {
     updateData.propertyType = input.propertyType;

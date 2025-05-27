@@ -110,6 +110,8 @@ const router = Router();
  *           type: string
  *         description:
  *           type: string
+ *         facilities:
+ *           type: string
  *         propertyType:
  *           type: string
  *           enum: [house, apartment]
@@ -231,6 +233,8 @@ const router = Router();
  *         title:
  *           type: string
  *         description:
+ *           type: string
+ *         facilities:
  *           type: string
  *         propertyType:
  *           type: string
