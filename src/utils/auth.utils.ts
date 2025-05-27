@@ -19,7 +19,7 @@ export const comparePassword = async (
 
 export const generateJwt = (userId: string, email: string): string => {
   return jwt.sign({ userId, email }, process.env.JWT_SECRET!, {
-    expiresIn: "10s",
+    expiresIn: "1h",
   });
 };
 
