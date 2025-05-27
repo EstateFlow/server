@@ -7,6 +7,7 @@ import {
 } from "../controllers/statistics.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/requireUserWithRole.middleware";
+import { getPropertyViewsByDate } from '../controllers/statistics.controller';
 
 const router = Router();
 
@@ -213,5 +214,49 @@ router.get(
   requireRole(["moderator"]),
   averagePriceGrowth
 );
+
+
+/**
+ * @swagger
+ * /stats/property-views/{propertyId}:
+ *   get:
+ *     summary: Get property view stats by date range
+ *     tags:
+ *       - Statistics
+ *     parameters:
+ *       - in: path
+ *         name: propertyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the property
+ *       - in: query
+ *         name: startDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Property view count
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 propertyId:
+ *                   type: string
+ *                 views:
+ *                   type: integer
+ */
+router.get('/property-views/:propertyId', getPropertyViewsByDate);
 
 export default router;

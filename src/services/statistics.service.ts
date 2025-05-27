@@ -1,6 +1,8 @@
 import { db } from "../db";
 import { sql } from "drizzle-orm";
+import { and, between, eq } from 'drizzle-orm';
 import { properties } from "../db/schema/properties.schema";
+import { propertyViews } from "../db/schema/property_views.schema";
 
 export const UKRAINE_REGIONS = [
   "Вінницька",
@@ -158,3 +160,20 @@ export const getAveragePriceGrowth = async (
   return results;
 };
 
+export const getPropertyViewStatsByDate = async (
+  propertyId: string,
+  startDate: Date,
+  endDate: Date
+) => {
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(propertyViews)
+    .where(
+      and(
+        eq(propertyViews.propertyId, propertyId),
+        between(propertyViews.viewedAt, startDate, endDate)
+      )
+    );
+
+  return result[0]?.count ?? 0;
+};
