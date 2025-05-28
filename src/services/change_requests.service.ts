@@ -1,4 +1,3 @@
-// src/services/changeRequest.service.ts
 import { db } from "../db";
 import { changeRequests } from "../db/schema/change_requests.schema";
 import { users } from "../db/schema/users.schema";
