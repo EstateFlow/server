@@ -7,25 +7,46 @@ import { v4 as uuidv4 } from "uuid";
 import { systemPrompts } from "../db/schema/system_prompts.schema";
 import { getProperties } from "./properties.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { parseAIResponse } from "../utils/ai.utils";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 const activeChatSessions = new Map();
 
-export const getDefaultSystemPrompt = async () => {
+export const getDefaultSystemPrompt = async (userId: string) => {
   try {
+    const [user] = await db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const promptName =
+      user.role === "renter_buyer"
+        ? "default-renter-buyer"
+        : "default-seller-agency";
+
     const prompt = await db
       .select()
       .from(systemPrompts)
-      .where(eq(systemPrompts.isDefault, true))
+      .where(
+        and(
+          eq(systemPrompts.isDefault, true),
+          eq(systemPrompts.name, promptName),
+        ),
+      )
       .limit(1);
 
     if (prompt.length === 0) {
-      throw new Error("Default system prompt not found");
+      throw new Error(`Default system prompt for ${promptName} not found`);
     }
 
     if (prompt.length > 1) {
       console.log(
-        "Multiple default system prompts found; returning the first one",
+        `Multiple default system prompts found for ${promptName}; returning the first one`,
       );
     }
 
@@ -76,10 +97,7 @@ export const updateSystemPrompt = async (
   }
 };
 
-export const createConversation = async (
-  userId: string,
-  title: string = "Property Analysis Chat",
-) => {
+export const createConversation = async (userId: string, title?: string) => {
   try {
     const existingConversation = await db
       .select()
@@ -103,7 +121,14 @@ export const createConversation = async (
       throw new Error("User not found");
     }
 
-    const defaultPrompt = await getDefaultSystemPrompt();
+    const defaultTitle =
+      user.role === "renter_buyer"
+        ? "Property Search Chat"
+        : "Property Listing Chat";
+
+    const conversationTitle = title || defaultTitle;
+
+    const defaultPrompt = await getDefaultSystemPrompt(userId);
     const propertiesList = await getProperties("active");
 
     if (propertiesList.length === 0) {
@@ -116,6 +141,7 @@ export const createConversation = async (
       - ID: ${p.id}
       - Title: ${p.title || "Unknown"}
       - Type: ${p.propertyType || "Unknown"}
+      - Descritpino: ${p.description || "Unknown"}
       - Transaction: ${p.transactionType || "Unknown"}
       - Price: ${p.price ? `${p.price} ${p.currency}` : "Unknown"}
       - Size: ${p.size ? `${p.size} sqm` : "Unknown"}
@@ -124,6 +150,7 @@ export const createConversation = async (
       - Status: ${p.status || "Unknown"}
       - Is Verified: ${p.isVerified ? "Yes" : "No"}
       - Images: ${p.images?.length || 0} images
+      - Facilities: ${p.facilities || "Unknown"}
       - Pricing History: ${
         p.pricingHistory?.length
           ? p.pricingHistory
@@ -148,7 +175,7 @@ export const createConversation = async (
         id: uuidv4(),
         userId,
         systemPromptId: defaultPrompt.id,
-        title,
+        title: conversationTitle,
         createdAt: new Date(),
         updatedAt: new Date(),
         isActive: true,
@@ -167,6 +194,20 @@ export const createConversation = async (
       })
       .returning();
 
+    const welcomeMessageContent =
+      user.role === "renter_buyer"
+        ? "Hi, I'm here to analyze properties for you."
+        : "Hi, I'm here to help you list and market your properties effectively.";
+
+    await db.insert(messages).values({
+      id: uuidv4(),
+      conversationId: newConversation[0].id,
+      sender: "ai",
+      content: welcomeMessageContent,
+      createdAt: new Date(),
+      isVisible: true,
+    });
+
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
     });
@@ -176,6 +217,10 @@ export const createConversation = async (
         {
           role: "user",
           parts: [{ text: initialMessageContent }],
+        },
+        {
+          role: "model",
+          parts: [{ text: welcomeMessageContent }],
         },
       ],
     });
@@ -361,6 +406,9 @@ export const sendMessage = async (userId: string, message: string) => {
   const text = response.text();
   console.log("AI Response:", text);
 
+  const parsedProperties = parseAIResponse(text);
+  console.log(parsedProperties);
+
   const aiResponseIndex = userMessageIndex + 1;
 
   const aiResponse = {
@@ -387,5 +435,6 @@ export const sendMessage = async (userId: string, message: string) => {
       ...aiResponse,
       index: aiResponseIndex,
     },
+    parsedProperties,
   };
 };

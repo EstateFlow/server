@@ -217,7 +217,6 @@ router.put("/system-prompt", updateSystemPrompt);
  *     security:
  *       - bearerAuth: []
  *     requestBody:
- *       required: true
  *       content:
  *         application/json:
  *           schema:
@@ -594,6 +593,18 @@ router.get("/conversations/visible-history", getVisibleConversationHistory);
  *                     index:
  *                       type: integer
  *                       description: Sequential order of the message in the conversation
+ *                 parsedProperties:
+ *                   type: array
+ *                   description: Array of properties parsed from the AI response
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       title:
+ *                         type: string
+ *                         description: Title of the property (e.g., 'Modern Downtown Apartment' or 'Сучасна квартира в центрі')
+ *                       propertyId:
+ *                         type: string
+ *                         description: Unique identifier of the property
  *             example:
  *               message: "Message sent successfully"
  *               userMessage:
@@ -611,7 +622,12 @@ router.get("/conversations/visible-history", getVisibleConversationHistory);
  *                 content: "This 3-bedroom apartment..."
  *                 createdAt: "2025-05-26T18:21:30Z"
  *                 isVisible: true
- *               index: 4
+ *                 index: 4
+ *               parsedProperties:
+ *                 - title: "Сучасна квартира в центрі"
+ *                   propertyId: "123"
+ *                 - title: "Modern Downtown Apartment"
+ *                   propertyId: "456"
  *       400:
  *         description: Missing required fields
  *         content:
