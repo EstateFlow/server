@@ -1,9 +1,15 @@
-import { Router } from "express";
+import { Router, RequestHandler } from "express";
 import {
   getUser,
   getUserById,
   updateUser,
 } from "../controllers/user.controller";
+import {
+  requestChangeEmail,
+  requestChangePassword,
+  confirm_Change,
+} from "../controllers/change_requests.controller";
+
 import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
@@ -211,5 +217,84 @@ router.get("/:userId", authMiddleware, getUserById);
  *         description: Internal server error
  */
 router.patch("/", authMiddleware, updateUser);
+
+/**
+ * @swagger
+ * /api/user/request-email-change:
+ *   post:
+ *     summary: Request email change
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newEmail:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email change requested
+ *       400:
+ *         description: Invalid email
+ *       401:
+ *         description: Unauthorized
+ */
+router.post("/request-email-change", authMiddleware, requestChangeEmail as RequestHandler);
+
+
+/**
+ * @swagger
+ * /api/user/request-password-change:
+ *   post:
+ *     summary: Request password change
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password change requested
+ *       400:
+ *         description: Invalid password
+ *       401:
+ *         description: Unauthorized
+ */
+router.post("/request-password-change", authMiddleware, requestChangePassword as RequestHandler);
+
+
+/**
+ * @swagger
+ * /api/user/confirm-change/{token}:
+ *   get:
+ *     summary: Confirm email or password change
+ *     tags: [User]
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Change confirmed
+ *       400:
+ *         description: Invalid or expired token
+ *       500:
+ *         description: Server error
+ */
+router.get("/confirm-change/:token", confirm_Change as RequestHandler);
+
 
 export default router;
