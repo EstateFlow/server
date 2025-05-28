@@ -104,3 +104,31 @@ export const sendChangeConfirmationEmail = async (
 
   await transporter.sendMail(mailOptions);
 };
+
+export const sendResetConfirmationEmail = async (
+  to: string,
+  token: string,
+  type: "email" | "password"
+) => {
+  const url = `${process.env.FRONTEND_URL}/password-reset/${token}`;
+  const subject =
+    type === "email" ? "Confirm Email Reset" : "Confirm Password Reset";
+  const message =
+    type === "email"
+      ? "Click the link below to confirm your new email address:"
+      : "Click the link below to create your new password:";
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to,
+    subject,
+    html: `
+      <h1>${subject}</h1>
+      <p>${message}</p>
+      <a href="${url}">${url}</a>
+      <p>This link will expire in 1 hour.</p>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};

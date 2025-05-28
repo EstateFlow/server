@@ -301,7 +301,7 @@ router.get("/confirm-change/:token", confirm_Change as RequestHandler);
 
 /**
  * @swagger
- * /api/reset/password-reset-request:
+ * /api/user/password-reset-request:
  *   post:
  *     summary: Request a password reset link
  *     tags: [User]
@@ -337,7 +337,7 @@ router.post("/password-reset-request", requestPasswordResetHandler as RequestHan
 
 /**
  * @swagger
- * /api/reset/password-reset:
+ * /api/user/password-reset:
  *   post:
  *     summary: Reset password with token
  *     tags: [User]

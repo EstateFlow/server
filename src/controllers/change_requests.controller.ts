@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { hash } from "bcrypt";
 import crypto from "crypto";
-import { sendChangeConfirmationEmail } from "../services/email.service";
+import { sendChangeConfirmationEmail, sendResetConfirmationEmail } from "../services/email.service";
 
 type ExpressHandler = (
   req: AuthRequest,
@@ -69,7 +69,7 @@ export const requestPasswordResetHandler = async (req: Request, res: Response) =
       expiresAt,
     });
 
-    await sendChangeConfirmationEmail(email, token, "password");
+    await sendResetConfirmationEmail(email, token, "password");
 
     res.status(200).json({ message: "Reset link sent if email exists" });
   } catch (error) {
