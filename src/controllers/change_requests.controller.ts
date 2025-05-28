@@ -9,6 +9,7 @@ import { users } from "../db/schema/users.schema";
 import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { hash } from "bcrypt";
+import crypto from "crypto";
 import { sendChangeConfirmationEmail } from "../services/email.service";
 
 type ExpressHandler = (
@@ -49,47 +50,59 @@ export const confirm_Change: ExpressHandler = async (req, res) => {
 };
 
 export const requestPasswordResetHandler = async (req: Request, res: Response) => {
-  const { email } = req.body;
+  try {
+    const { email } = req.body;
 
-  const [user] = await db.select().from(users).where(eq(users.email, email));
-  if (!user) return res.status(200).json({ message: "If this email exists, reset instructions were sent" });
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    if (!user) {
+      return res.status(200).json({ message: "If this email exists, reset instructions were sent" });
+    }
 
-  const token = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 час
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 час
 
-  await db.insert(changeRequests).values({
-    userId: user.id,
-    type: "password",
-    newValue: "placeholder",
-    token,
-    expiresAt,
-  });
+    await db.insert(changeRequests).values({
+      userId: user.id,
+      type: "password",
+      newValue: "placeholder",
+      token,
+      expiresAt,
+    });
 
-  await sendChangeConfirmationEmail(email, token, "password");
+    await sendChangeConfirmationEmail(email, token, "password");
 
-  res.status(200).json({ message: "Reset link sent if email exists" });
+    res.status(200).json({ message: "Reset link sent if email exists" });
+  } catch (error) {
+    console.error("Password reset error:", error);
+    res.status(500).json({ message: "Internal server error", error: error instanceof Error ? error.message : "Unknown error" });
+  }
 };
 
 export const resetPasswordHandler = async (req: Request, res: Response) => {
-  const { token, password } = req.body;
+    try {
+    const { token, password } = req.body;
 
-  const [request] = await db
-    .select()
-    .from(changeRequests)
-    .where(eq(changeRequests.token, token));
+    const [request] = await db
+        .select()
+        .from(changeRequests)
+        .where(eq(changeRequests.token, token));
 
-  if (!request || request.expiresAt < new Date() || request.type !== "password") {
-    return res.status(400).json({ message: "Invalid or expired token" });
+    if (!request || request.expiresAt < new Date() || request.type !== "password") {
+        return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    const passwordHash = await hash(password, 10);
+
+    await db
+        .update(users)
+        .set({ passwordHash })
+        .where(eq(users.id, request.userId));
+
+    await db.delete(changeRequests).where(eq(changeRequests.id, request.id));
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Password reset error:", error);
+    res.status(500).json({ message: "Internal server error", error: error instanceof Error ? error.message : "Unknown error" });
   }
-
-  const passwordHash = await hash(password, 10);
-
-  await db
-    .update(users)
-    .set({ passwordHash })
-    .where(eq(users.id, request.userId));
-
-  await db.delete(changeRequests).where(eq(changeRequests.id, request.id));
-
-  res.status(200).json({ message: "Password updated successfully" });
 };
