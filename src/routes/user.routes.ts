@@ -8,6 +8,8 @@ import {
   requestChangeEmail,
   requestChangePassword,
   confirm_Change,
+  requestPasswordResetHandler,
+  resetPasswordHandler,
 } from "../controllers/change_requests.controller";
 
 import { authMiddleware } from "../middleware/auth.middleware";
@@ -296,5 +298,90 @@ router.post("/request-password-change", authMiddleware, requestChangePassword as
  */
 router.get("/confirm-change/:token", confirm_Change as RequestHandler);
 
+
+/**
+ * @swagger
+ * /api/reset/password-reset-request:
+ *   post:
+ *     summary: Request a password reset link
+ *     tags: [User]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *     responses:
+ *       200:
+ *         description: If the email exists, a reset link was sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Reset link sent if email exists
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/password-reset-request", requestPasswordResetHandler as RequestHandler);
+
+
+/**
+ * @swagger
+ * /api/reset/password-reset:
+ *   post:
+ *     summary: Reset password with token
+ *     tags: [User]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - password
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 example: 123e4567-e89b-12d3-a456-426614174000
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: NewSecurePassword123!
+ *     responses:
+ *       200:
+ *         description: Password successfully updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Password updated successfully
+ *       400:
+ *         description: Invalid or expired token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid or expired token
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/password-reset", resetPasswordHandler as RequestHandler);
 
 export default router;
