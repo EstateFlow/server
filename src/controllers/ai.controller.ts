@@ -10,7 +10,9 @@ type ExpressHandler = (
 
 export const getSystemPrompt: ExpressHandler = async (req, res) => {
   try {
-    const systemPrompt = await aiService.getDefaultSystemPrompt();
+    const systemPrompt = await aiService.getDefaultSystemPrompt(
+      req.user!.userId,
+    );
     res.status(200).json({
       message: "System prompt retrieved successfully",
       prompts: systemPrompt,
@@ -146,6 +148,7 @@ export const sendMessage: ExpressHandler = async (req, res) => {
       message: "Message sent successfully",
       userMessage: result.userMessage,
       aiResponse: result.aiResponse,
+      parsedProperties: result.parsedProperties,
     });
   } catch (error: any) {
     console.error("Error sending message:", error);
