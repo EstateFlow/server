@@ -42,8 +42,8 @@ export const requestChangePassword: ExpressHandler = async (req, res) => {
 export const confirm_Change: ExpressHandler = async (req, res) => {
   const { token } = req.params;
   try {
-    await confirmChange(token);
-    res.json({ message: "Change confirmed" });
+    const result = await confirmChange(token);
+    res.json(result);
   } catch {
     res.status(400).json({ message: "Invalid or expired token" });
   }
@@ -55,7 +55,7 @@ export const requestPasswordResetHandler = async (req: Request, res: Response) =
 
     const [user] = await db.select().from(users).where(eq(users.email, email));
     if (!user) {
-      return res.status(200).json({ message: "If this email exists, reset instructions were sent" });
+      return res.status(400).json({ message: "Account with this email either does not exist, or an incorrect email was entered" });
     }
 
     const token = crypto.randomUUID();

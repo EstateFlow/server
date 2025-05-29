@@ -104,6 +104,7 @@ export const updateUser = async (
   if (data.username !== undefined) updateData.username = data.username;
   if (data.avatarUrl !== undefined) updateData.avatarUrl = data.avatarUrl;
   if (data.bio !== undefined) updateData.bio = data.bio;
+  if (data.username !== undefined || data.avatarUrl !== undefined || data.bio !== undefined) updateData.updatedAt = new Date().getTime();
 
   if (Object.keys(updateData).length === 0) {
     throw new Error("No valid fields to update");
@@ -134,15 +135,9 @@ export const updateUser = async (
 
   const user = userResult[0];
   return {
-    userId: user.id,
-    email: user.email,
     username: user.username,
     avatarUrl: user.avatarUrl,
     bio: user.bio,
-    role: user.role,
-    isEmailVerified: user.isEmailVerified,
-    listingLimit: user.listingLimit,
-    createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
 };

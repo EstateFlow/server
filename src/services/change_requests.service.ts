@@ -59,11 +59,16 @@ export const confirmChange = async (token: string) => {
       .update(users)
       .set({ email: request.newValue })
       .where(eq(users.id, request.userId));
+    return { 
+      message: "Email changed successfully",
+      email: request.newValue 
+    };
   } else if (request.type === "password") {
     await db
       .update(users)
       .set({ passwordHash: request.newValue })
       .where(eq(users.id, request.userId));
+    return { message: "Password changed successfully" };
   }
 
   await db.delete(changeRequests).where(eq(changeRequests.id, request.id));
