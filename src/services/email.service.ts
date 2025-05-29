@@ -82,7 +82,10 @@ export const sendChangeConfirmationEmail = async (
   token: string,
   type: "email" | "password"
 ) => {
-  const url = `${process.env.FRONTEND_URL}/confirm-change/${token}`;
+  const url =
+  type === "email"
+    ? `${process.env.FRONTEND_URL}/confirm-change/${token}/email`
+    : `${process.env.FRONTEND_URL}/confirm-change/${token}/password`;
   const subject =
     type === "email" ? "Confirm Email Change" : "Confirm Password Change";
   const message =

@@ -189,25 +189,12 @@ router.get("/:userId", authMiddleware, getUserById);
  *             schema:
  *               type: object
  *               properties:
- *                 userId:
- *                   type: string
- *                 email:
- *                   type: string
  *                 username:
  *                   type: string
  *                 avatarUrl:
  *                   type: string
  *                 bio:
  *                   type: string
- *                 role:
- *                   type: string
- *                 isEmailVerified:
- *                   type: boolean
- *                 listingLimit:
- *                   type: integer
- *                 createdAt:
- *                   type: string
- *                   format: date-time
  *                 updatedAt:
  *                   type: string
  *                   format: date-time
@@ -278,7 +265,7 @@ router.post("/request-password-change", authMiddleware, requestChangePassword as
 
 /**
  * @swagger
- * /api/user/confirm-change/{token}:
+ * /api/user/confirm-change/{token}/{type}:
  *   get:
  *     summary: Confirm email or password change
  *     tags: [User]
@@ -291,12 +278,24 @@ router.post("/request-password-change", authMiddleware, requestChangePassword as
  *     responses:
  *       200:
  *         description: Change confirmed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Email changed successfully
+ *                 email:
+ *                   type: string
+ *                   example: new@example.com
+ *                   description: Present only for email change requests
  *       400:
  *         description: Invalid or expired token
  *       500:
  *         description: Server error
  */
-router.get("/confirm-change/:token", confirm_Change as RequestHandler);
+router.get("/confirm-change/:token/:type", confirm_Change as RequestHandler);
 
 
 /**
@@ -329,6 +328,16 @@ router.get("/confirm-change/:token", confirm_Change as RequestHandler);
  *                 message:
  *                   type: string
  *                   example: Reset link sent if email exists
+ *       400:
+ *         description: Account with this email either does not exist, or an incorrect email was entered"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Account with this email either does not exist, or an incorrect email was entered"
  *       500:
  *         description: Internal server error
  */
