@@ -12,32 +12,13 @@ import wishlistRouter from "./routes/wishlist.routes";
 import statsRouter from "./routes/statistics.routes";
 import { initializeDefaultPrompt } from "./utils/ai.utils";
 import userRouter from "./routes/user.routes";
+import axios from "axios";
 
 dotenv.config();
 
+axios.defaults.headers.common["Accept-Encoding"] = "gzip, deflate";
+
 const app = express();
-
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  "http://localhost:5173",
-  "https://estateflow-beryl.vercel.app",
-].filter((url): url is string => typeof url === "string");
-
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) {
-      return callback(null, true);
-    }
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error("Not allowed by CORS"), false);
-  },
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-};
-
-app.use(cors(corsOptions));
 
 app.use(cors());
 app.use(cookieParser());

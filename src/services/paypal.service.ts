@@ -15,12 +15,18 @@ const PAYPAL_API = process.env.PAYPAL_API!;
 const CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
 
+const paypalClient = axios.create({
+  headers: {
+    "Accept-Encoding": "gzip, deflate",
+  },
+});
+
 async function getAccessToken(): Promise<string> {
   const basicAuth = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString(
     "base64",
   );
 
-  const res = await axios.post(
+  const res = await paypalClient.post(
     `${PAYPAL_API}/v1/oauth2/token`,
     "grant_type=client_credentials",
     {
@@ -42,11 +48,11 @@ export async function createOrder(
     sku: string;
     category?: "DIGITAL_GOODS" | "PHYSICAL_GOODS" | "DONATION";
   },
-  currency = "USD"
+  currency = "USD",
 ) {
   const accessToken = await getAccessToken();
 
-  const res = await axios.post(
+  const res = await paypalClient.post(
     `${PAYPAL_API}/v2/checkout/orders`,
     {
       intent: "CAPTURE",
@@ -55,6 +61,12 @@ export async function createOrder(
           amount: {
             currency_code: currency,
             value: amount,
+            breakdown: {
+              item_total: {
+                currency_code: currency,
+                value: amount,
+              },
+            },
           },
           items: [
             {
@@ -79,8 +91,8 @@ export async function createOrder(
             locale: "en-US",
             landing_page: "LOGIN",
             user_action: "PAY_NOW",
-            return_url: "${process.env.FRONTEND_URL}/complete-payment",
-            cancel_url: "${process.env.FRONTEND_URL}/cancel-payment",
+            return_url: `${process.env.FRONTEND_URL}/complete-payment`,
+            cancel_url: `${process.env.FRONTEND_URL}/cancel-payment`,
           },
         },
       },
@@ -90,7 +102,7 @@ export async function createOrder(
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-    }
+    },
   );
 
   return res.data;
@@ -100,7 +112,7 @@ export async function captureOrder(orderId: string, email?: string) {
   const accessToken = await getAccessToken();
 
   try {
-    const res = await axios.post(
+    const res = await paypalClient.post(
       `${PAYPAL_API}/v2/checkout/orders/${orderId}/capture`,
       {},
       {
@@ -108,7 +120,7 @@ export async function captureOrder(orderId: string, email?: string) {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     const orderDetails = {
@@ -128,11 +140,15 @@ export async function captureOrder(orderId: string, email?: string) {
 
     return orderDetails;
   } catch (error: any) {
-    console.error("Failed to capture order:", error.response?.data || error.message);
-    throw new Error(error.response?.data?.message || "Failed to capture PayPal order");
+    console.error(
+      "Failed to capture order:",
+      error.response?.data || error.message,
+    );
+    throw new Error(
+      error.response?.data?.message || "Failed to capture PayPal order",
+    );
   }
 }
-
 
 export async function updatePropertyStatusFromOrder(orderData: any) {
   const item = orderData.purchase_units?.[0]?.items?.[0];
