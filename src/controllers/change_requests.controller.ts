@@ -22,10 +22,27 @@ type ExpressHandler = (
 export const requestChangeEmail: ExpressHandler = async (req, res) => {
   const { newEmail } = req.body;
   const userId = req.user?.userId;
-  if (!newEmail || !userId) return res.sendStatus(400);
+  
+  if (!newEmail || !userId) {
+    return res.status(400).json({ message: "Email and user ID are required" });
+  }
 
-  await requestEmailChange(userId, newEmail);
-  res.json({ message: "Confirmation email sent to new address" });
+  try {
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, newEmail));
+
+    if (existingUser && existingUser.id !== userId) {
+      return res.status(400).json({ message: "Email is already in use by another user" });
+    }
+
+    await requestEmailChange(userId, newEmail);
+    res.json({ message: "Confirmation email sent to new address" });
+  } catch (error) {
+    console.error("Error requesting email change:", error);
+    res.status(500).json({ message: "Failed to process email change request" });
+  }
 };
 
 export const requestChangePassword: ExpressHandler = async (req, res) => {
