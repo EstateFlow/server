@@ -135,3 +135,31 @@ export const sendResetConfirmationEmail = async (
 
   await transporter.sendMail(mailOptions);
 };
+
+export const sendOrderSuccessEmail = async (to: string, orderDetails: any) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to,
+    subject: `Order Confirmation - ${orderDetails.id}`,
+    html: `
+      <h1>Thank you for your order!</h1>
+      <p>Your order has been successfully completed.</p>
+      <p><strong>Order ID:</strong> ${orderDetails.id}</p>
+      <p><strong>Status:</strong> ${orderDetails.status}</p>
+      <p><strong>Created:</strong> ${new Date(orderDetails.createTime).toLocaleString()}</p>
+      ${orderDetails.items ? `
+        <h3>Items:</h3>
+        <ul>
+          ${orderDetails.items.map((item: any) => `
+            <li>
+              ${item.name || 'Unnamed item'} - ${item.quantity} x ${item.unit_amount?.value} ${item.unit_amount?.currency_code}
+            </li>
+          `).join('')}
+        </ul>
+      ` : ''}
+      <p>We appreciate your business!</p>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
