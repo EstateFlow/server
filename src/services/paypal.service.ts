@@ -108,7 +108,7 @@ export async function createOrder(
   return res.data;
 }
 
-export async function captureOrder(orderId: string, email?: string) {
+export async function captureOrder(orderId: string, propertyId: string, email?: string) {
   const accessToken = await getAccessToken();
 
   try {
@@ -128,35 +128,24 @@ export async function captureOrder(orderId: string, email?: string) {
       status: res.data.status,
       createTime: res.data.create_time,
       updateTime: res.data.update_time,
-      items: res.data.purchase_units[0]?.items,
     };
 
     const customerEmail = email || res.data.payer?.email_address;
 
     if (orderDetails.status === "COMPLETED" && customerEmail) {
-      await updatePropertyStatusFromOrder(res.data);
-      await sendOrderSuccessEmail(customerEmail, orderDetails);
+      await updatePropertyStatus(propertyId);
+      await sendOrderSuccessEmail(customerEmail, orderDetails, propertyId);
     }
 
     return orderDetails;
   } catch (error: any) {
-    console.error(
-      "Failed to capture order:",
-      error.response?.data || error.message,
-    );
-    throw new Error(
-      error.response?.data?.message || "Failed to capture PayPal order",
-    );
+    console.error("Failed to capture order:", error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || "Failed to capture PayPal order");
   }
 }
 
-export async function updatePropertyStatusFromOrder(orderData: any) {
-  const item = orderData.purchase_units?.[0]?.items?.[0];
-  const sku = item?.sku;
-  if (!sku) return;
 
-  const propertyId = sku;
-
+export async function updatePropertyStatus(propertyId: string) {
   const property = await db
     .select()
     .from(properties)

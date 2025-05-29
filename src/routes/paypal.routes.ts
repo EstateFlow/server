@@ -180,8 +180,8 @@ router.post("/create-order", async (req, res) => {
  */
 router.post("/capture-order", async (req, res) => {
   try {
-    const { orderId, email } = req.body;
-    const capture = await captureOrder(orderId, email);
+    const { orderId, propertyId, email } = req.body;
+    const capture = await captureOrder(orderId, propertyId, email);
     res.json({ status: capture.status, id: capture.id });
   } catch (err) {
     const error = err as Error;

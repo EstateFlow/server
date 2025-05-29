@@ -1,6 +1,11 @@
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import { transform } from "typescript";
+import { db } from "../db";
+import { eq } from "drizzle-orm";
+import { properties } from "../db/schema/properties.schema";
+import { users } from "../db/schema/users.schema";
+import { documents } from "../db/schema/documents.schema";
 
 dotenv.config();
 
@@ -136,30 +141,114 @@ export const sendResetConfirmationEmail = async (
   await transporter.sendMail(mailOptions);
 };
 
-export const sendOrderSuccessEmail = async (to: string, orderDetails: any) => {
+export const sendOrderSuccessEmail = async (
+  buyerEmail: string,
+  orderDetails: any,
+  propertyId: string
+) => {
+  const property = await db
+    .select()
+    .from(properties)
+    .where(eq(properties.id, propertyId))
+    .then((rows) => rows[0]);
+
+  if (!property) {
+    throw new Error(`Property with ID ${propertyId} not found`);
+  }
+
+  const [owner, buyer] = await Promise.all([
+    db.select().from(users).where(eq(users.id, property.ownerId)).then((rows) => rows[0]),
+    db.select().from(users).where(eq(users.email, buyerEmail)).then((rows) => rows[0]),
+  ]);
+
+  const documentType =
+    property.transactionType === "rent" ? "rental_agreement" : "deposit_receipt";
+
+  const documentData = {
+    orderId: orderDetails.id,
+    status: orderDetails.status,
+    created: orderDetails.createTime,
+    transactionType: property.transactionType,
+    property: {
+      title: property.title,
+      price: property.price,
+      currency: property.currency,
+      size: property.size,
+      rooms: property.rooms,
+      address: property.address,
+      type: property.propertyType,
+    },
+    seller: {
+      username: owner?.username,
+      email: owner?.email,
+      role: owner?.role,
+    },
+    buyer: {
+      username: buyer?.username,
+      email: buyer?.email,
+    },
+  };
+
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to,
-    subject: `Order Confirmation - ${orderDetails.id}`,
+    to: buyerEmail,
+    subject: `Confirmation of ${property.transactionType} - ${property.title}`,
     html: `
-      <h1>Thank you for your order!</h1>
-      <p>Your order has been successfully completed.</p>
-      <p><strong>Order ID:</strong> ${orderDetails.id}</p>
-      <p><strong>Status:</strong> ${orderDetails.status}</p>
-      <p><strong>Created:</strong> ${new Date(orderDetails.createTime).toLocaleString()}</p>
-      ${orderDetails.items ? `
-        <h3>Items:</h3>
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; border: 1px solid #ccc; border-radius: 8px;">
+        <h1 style="color: #2e6da4;">${property.transactionType === 'sale' ? 'Sale' : 'Rental'} Agreement Confirmation</h1>
+        
+        <p>Dear ${buyer?.username || 'Customer'},</p>
+        <p>This is to confirm that the transaction for the following property has been successfully completed.</p>
+
+        <hr>
+
+        <h2>🧾 Transaction Details</h2>
         <ul>
-          ${orderDetails.items.map((item: any) => `
-            <li>
-              ${item.name || 'Unnamed item'} - ${item.quantity} x ${item.unit_amount?.value} ${item.unit_amount?.currency_code}
-            </li>
-          `).join('')}
+          <li><strong>Order ID:</strong> ${orderDetails.id}</li>
+          <li><strong>Status:</strong> ${orderDetails.status}</li>
+          <li><strong>Date:</strong> ${new Date(orderDetails.createTime).toLocaleString()}</li>
+          <li><strong>Transaction Type:</strong> ${property.transactionType}</li>
         </ul>
-      ` : ''}
-      <p>We appreciate your business!</p>
+
+        <h2>🏠 Property Information</h2>
+        <ul>
+          <li><strong>Title:</strong> ${property.title}</li>
+          <li><strong>Price:</strong> ${property.price} ${property.currency}</li>
+          <li><strong>Size:</strong> ${property.size || 'N/A'} m²</li>
+          <li><strong>Rooms:</strong> ${property.rooms || 'N/A'}</li>
+          <li><strong>Type:</strong> ${property.propertyType}</li>
+          <li><strong>Address:</strong> ${property.address}</li>
+        </ul>
+
+        <h2>👤 Seller Information</h2>
+        <ul>
+          <li><strong>Name:</strong> ${owner?.username || 'N/A'}</li>
+          <li><strong>Email:</strong> ${owner?.email || 'N/A'}</li>
+        </ul>
+
+        <h2>🧍 Buyer Information</h2>
+        <ul>
+          <li><strong>Name:</strong> ${buyer?.username || 'N/A'}</li>
+          <li><strong>Email:</strong> ${buyer?.email || 'N/A'}</li>
+        </ul>
+
+        <hr>
+
+        <p style="margin-top: 20px;">Please keep this confirmation for your records. Thank you for choosing our platform!</p>
+
+        <p>Best regards,<br/>The Real Estate Team</p>
+      </div>
     `,
   };
+
+  if (buyer?.id) {
+    await db.insert(documents).values({
+      user_id: buyer.id,
+      payment_id: orderDetails.id,
+      document_type: documentType,
+      document_data: documentData,
+    });
+  }
 
   await transporter.sendMail(mailOptions);
 };
