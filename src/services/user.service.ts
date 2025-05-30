@@ -1,7 +1,9 @@
 import { db } from "../db";
 import { properties } from "../db/schema/properties.schema";
+import { subscriptionPlans } from "../db/schema/subscription_plans.schema";
+import { subscriptions } from "../db/schema/subscriptions.schema";
 import { users } from "../db/schema/users.schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
 
 export const getUser = async (userId: string) => {
   const userResult = await db
@@ -83,6 +85,27 @@ export const getUserById = async (userId: string) => {
       and(eq(properties.ownerId, user.id), eq(properties.isVerified, true)),
     );
 
+  const subscriptionResult = await db
+    .select({
+      status: subscriptions.status,
+      startDate: subscriptions.startDate,
+      endDate: subscriptions.endDate,
+      planName: subscriptionPlans.name,
+      planPrice: subscriptionPlans.price,
+      planCurrency: subscriptionPlans.currency,
+    })
+    .from(subscriptions)
+    .leftJoin(
+      subscriptionPlans,
+      eq(subscriptions.subscriptionPlanId, subscriptionPlans.id),
+    )
+    .where(
+      and(
+        eq(subscriptions.userId, user.id),
+        gte(subscriptions.endDate, new Date()),
+      ),
+    );
+
   return {
     userId: user.id,
     email: user.email,
@@ -93,6 +116,7 @@ export const getUserById = async (userId: string) => {
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
     properties: propertiesResult,
+    subscription: subscriptionResult.length > 0 ? subscriptionResult[0] : {},
   };
 };
 
@@ -104,7 +128,12 @@ export const updateUser = async (
   if (data.username !== undefined) updateData.username = data.username;
   if (data.avatarUrl !== undefined) updateData.avatarUrl = data.avatarUrl;
   if (data.bio !== undefined) updateData.bio = data.bio;
-  if (data.username !== undefined || data.avatarUrl !== undefined || data.bio !== undefined) updateData.updatedAt = new Date();
+  if (
+    data.username !== undefined ||
+    data.avatarUrl !== undefined ||
+    data.bio !== undefined
+  )
+    updateData.updatedAt = new Date();
 
   if (Object.keys(updateData).length === 0) {
     throw new Error("No valid fields to update");
@@ -141,4 +170,3 @@ export const updateUser = async (
     updatedAt: user.updatedAt,
   };
 };
-

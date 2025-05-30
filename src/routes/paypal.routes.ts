@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createOrder, captureOrder, createSubscriptionOrder, captureSubscriptionOrder } from "../services/paypal.service";
+import { createOrder, captureOrder } from "../services/paypal.service";
 
 const router = Router();
 
@@ -7,8 +7,7 @@ const router = Router();
  * @swagger
  * tags:
  *   name: PayPal
- *   description: PayPal payment processing operations
- * 
+ *
  * /api/paypal/create-order:
  *   post:
  *     summary: Create a new PayPal order
@@ -183,120 +182,6 @@ router.post("/capture-order", async (req, res) => {
     const { orderId, propertyId, email } = req.body;
     const capture = await captureOrder(orderId, propertyId, email);
     res.json({ status: capture.status, id: capture.id });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ message: error.message });
-  }
-});
-
-
-/**
- * @swagger
- * /subscription/create-subscription-order:
- *   post:
- *     summary: Create a PayPal subscription order
- *     tags: [Subscription]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - amount
- *               - item
- *             properties:
- *               amount:
- *                 type: string
- *                 example: "9.99"
- *               item:
- *                 type: object
- *                 required:
- *                   - name
- *                 properties:
- *                   name:
- *                     type: string
- *                     example: "Pro Plan"
- *                   description:
- *                     type: string
- *                     example: "Access to premium features"
- *                   category:
- *                     type: string
- *                     enum: [DIGITAL_GOODS, PHYSICAL_GOODS, DONATION]
- *                     example: "DIGITAL_GOODS"
- *     responses:
- *       200:
- *         description: Order created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *       500:
- *         description: Internal server error
- */
-router.post("/create-subscription-order", async (req, res) => {
-  try {
-    const { amount, item } = req.body;
-    const order = await createSubscriptionOrder(amount, item);
-    res.json({ id: order.id });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ message: error.message });
-  }
-});
-
-/**
- * @swagger
- * /subscription/capture-subscription-order:
- *   post:
- *     summary: Capture a PayPal subscription order and activate subscription
- *     tags: [Subscription]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - orderId
- *               - userId
- *               - subscriptionPlanId
- *             properties:
- *               orderId:
- *                 type: string
- *                 example: "1AB23456CD7890123"
- *               userId:
- *                 type: string
- *                 example: "user-uuid-1234"
- *               subscriptionPlanId:
- *                 type: string
- *                 example: "plan-uuid-1234"
- *               email:
- *                 type: string
- *                 example: "user@example.com"
- *     responses:
- *       200:
- *         description: Order captured and subscription created
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                 id:
- *                   type: string
- *       500:
- *         description: Failed to capture PayPal subscription order
- */
-router.post("/capture-subscription-order", async (req, res) => {
-  try {
-    const { orderId, userId, subscriptionPlanId, email } = req.body;
-    const result = await captureSubscriptionOrder(orderId, userId, subscriptionPlanId, email);
-    res.json({ status: result.status, id: result.id });
   } catch (err) {
     const error = err as Error;
     res.status(500).json({ message: error.message });

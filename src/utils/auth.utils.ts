@@ -19,7 +19,7 @@ export const comparePassword = async (
 
 export const generateJwt = (userId: string, email: string): string => {
   return jwt.sign({ userId, email }, process.env.JWT_SECRET!, {
-    expiresIn: "1h",
+    expiresIn: "2h",
   });
 };
 
@@ -32,7 +32,6 @@ export const generateRefreshToken = async (userId: string): Promise<string> => {
     const token = jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET!, {
       expiresIn: "7d",
     });
-    const hashedToken = await bcrypt.hash(token, 10);
 
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     if (isNaN(expiresAt.getTime())) {
@@ -41,8 +40,9 @@ export const generateRefreshToken = async (userId: string): Promise<string> => {
 
     await db.insert(refreshTokens).values({
       userId,
-      token: hashedToken,
+      token,
       expiresAt,
+      revoked: false,
     });
 
     return token;
