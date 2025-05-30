@@ -112,6 +112,30 @@ router.get("/", authMiddleware, getUser);
  *                 updatedAt:
  *                   type: string
  *                   format: date-time
+ *                 subscription:
+ *                   type: object
+ *                   nullable: true
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: "active"
+ *                     startDate:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-05-30T19:02:00Z"
+ *                     endDate:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-06-29T19:02:00Z"
+ *                     planName:
+ *                       type: string
+ *                       example: "Pro Plan"
+ *                     planPrice:
+ *                       type: number
+ *                       example: 9.99
+ *                     planCurrency:
+ *                       type: string
+ *                       example: "USD"
  *                 properties:
  *                   type: array
  *                   items:
@@ -232,8 +256,11 @@ router.patch("/", authMiddleware, updateUser);
  *       401:
  *         description: Unauthorized
  */
-router.post("/request-email-change", authMiddleware, requestChangeEmail as RequestHandler);
-
+router.post(
+  "/request-email-change",
+  authMiddleware,
+  requestChangeEmail as RequestHandler,
+);
 
 /**
  * @swagger
@@ -260,8 +287,11 @@ router.post("/request-email-change", authMiddleware, requestChangeEmail as Reque
  *       401:
  *         description: Unauthorized
  */
-router.post("/request-password-change", authMiddleware, requestChangePassword as RequestHandler);
-
+router.post(
+  "/request-password-change",
+  authMiddleware,
+  requestChangePassword as RequestHandler,
+);
 
 /**
  * @swagger
@@ -296,7 +326,6 @@ router.post("/request-password-change", authMiddleware, requestChangePassword as
  *         description: Server error
  */
 router.get("/confirm-change/:token/:type", confirm_Change as RequestHandler);
-
 
 /**
  * @swagger
@@ -341,8 +370,10 @@ router.get("/confirm-change/:token/:type", confirm_Change as RequestHandler);
  *       500:
  *         description: Internal server error
  */
-router.post("/password-reset-request", requestPasswordResetHandler as RequestHandler);
-
+router.post(
+  "/password-reset-request",
+  requestPasswordResetHandler as RequestHandler,
+);
 
 /**
  * @swagger

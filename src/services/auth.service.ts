@@ -180,26 +180,21 @@ export const refreshToken = async ({
   refreshToken,
 }: RefreshTokenInput): Promise<RefreshTokenResult> => {
   const tokenResults = await db
-    .select({ userId: refreshTokens.userId, token: refreshTokens.token })
+    .select({ userId: refreshTokens.userId })
     .from(refreshTokens)
     .where(
       and(
+        eq(refreshTokens.token, refreshToken),
         gt(refreshTokens.expiresAt, new Date()),
         eq(refreshTokens.revoked, false),
       ),
     );
 
-  let userId: string | null = null;
-  for (const tokenResult of tokenResults) {
-    if (await bcrypt.compare(refreshToken, tokenResult.token)) {
-      userId = tokenResult.userId;
-      break;
-    }
-  }
-
-  if (!userId) {
+  if (!tokenResults.length) {
     throw new Error("Invalid or expired refresh token");
   }
+
+  const userId = tokenResults[0].userId;
 
   const user = await db
     .select({ email: users.email })
@@ -215,9 +210,8 @@ export const refreshToken = async ({
     .set({ revoked: true })
     .where(
       and(
+        eq(refreshTokens.token, refreshToken),
         eq(refreshTokens.userId, userId),
-        gt(refreshTokens.expiresAt, new Date()),
-        eq(refreshTokens.revoked, false),
       ),
     );
 

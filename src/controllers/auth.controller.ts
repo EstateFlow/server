@@ -76,6 +76,7 @@ export const refreshToken: ExpressHandler = async (req, res) => {
       await authService.refreshToken({
         refreshToken,
       });
+
     res.json({ accessToken, refreshToken: newRefreshToken });
   } catch (error: any) {
     console.error("Error in refreshToken:", error);

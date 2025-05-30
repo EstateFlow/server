@@ -272,10 +272,10 @@ export const addNewProperty = async (input: CreatePropertyInput) => {
     .where(eq(users.id, input.ownerId));
   const ownerData = owner[0];
 
-  if (role === "private_seller" && listingLimit === 0) {
+  if (role === "private_seller" && (listingLimit || 0) !== 0) {
     await db
       .update(users)
-      .set({ listingLimit: listingLimit - 1 })
+      .set({ listingLimit: listingLimit || 0 - 1 })
       .where(eq(users.id, input.ownerId));
   }
 

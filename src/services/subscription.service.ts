@@ -1,51 +1,22 @@
-import axios from "axios";
-import dotenv from "dotenv";
-import { sendOrderSuccessEmail } from "./email.service";
 import { db } from "../db";
-import { properties } from "../db/schema/properties.schema";
+import { subscriptionPlans } from "../db/schema/subscription_plans.schema";
+import { subscriptions } from "../db/schema/subscriptions.schema";
+import { users } from "../db/schema/users.schema";
+import { sendSubscriptionSuccessEmail } from "./email.service";
+import { getAccessToken, PAYPAL_API, paypalClient } from "./paypal.service";
 import { eq } from "drizzle-orm";
+import { v4 as uuidv4 } from "uuid";
 
-const envFile =
-  process.env.NODE_ENV === "production"
-    ? ".production.env"
-    : ".development.env";
-dotenv.config({ path: envFile });
+export const getSubscriptions = async () => {
+  const subscriptinons = await db.select().from(subscriptionPlans);
+  return subscriptinons;
+};
 
-export const PAYPAL_API = process.env.PAYPAL_API!;
-export const CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
-export const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
-
-export const paypalClient = axios.create({
-  headers: {
-    "Accept-Encoding": "gzip, deflate",
-  },
-});
-
-export async function getAccessToken(): Promise<string> {
-  const basicAuth = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString(
-    "base64",
-  );
-
-  const res = await paypalClient.post(
-    `${PAYPAL_API}/v1/oauth2/token`,
-    "grant_type=client_credentials",
-    {
-      headers: {
-        Authorization: `Basic ${basicAuth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    },
-  );
-
-  return res.data.access_token;
-}
-
-export async function createOrder(
+export async function createSubscriptionOrder(
   amount: string,
   item: {
     name: string;
     description?: string;
-    sku: string;
     category?: "DIGITAL_GOODS" | "PHYSICAL_GOODS" | "DONATION";
   },
   currency = "USD",
@@ -77,8 +48,7 @@ export async function createOrder(
               },
               quantity: "1",
               description: item.description,
-              sku: item.sku,
-              category: item.category || "PHYSICAL_GOODS",
+              category: item.category || "DIGITAL_GOODS",
             },
           ],
         },
@@ -91,8 +61,8 @@ export async function createOrder(
             locale: "en-US",
             landing_page: "LOGIN",
             user_action: "PAY_NOW",
-            return_url: `${process.env.FRONTEND_URL}/complete-payment`,
-            cancel_url: `${process.env.FRONTEND_URL}/cancel-payment`,
+            return_url: `${process.env.FRONTEND_URL}/complete-subscription`,
+            cancel_url: `${process.env.FRONTEND_URL}/cancel-subscription`,
           },
         },
       },
@@ -108,12 +78,14 @@ export async function createOrder(
   return res.data;
 }
 
-export async function captureOrder(
+export async function captureSubscriptionOrder(
   orderId: string,
-  propertyId: string,
+  userId: string,
+  subscriptionPlanId: string,
   email?: string,
 ) {
   const accessToken = await getAccessToken();
+  console.log(accessToken);
 
   try {
     const res = await paypalClient.post(
@@ -137,45 +109,63 @@ export async function captureOrder(
     const customerEmail = email || res.data.payer?.email_address;
 
     if (orderDetails.status === "COMPLETED" && customerEmail) {
-      await updatePropertyStatus(propertyId);
-      await sendOrderSuccessEmail(customerEmail, orderDetails, propertyId);
+      await createSubscription(userId, subscriptionPlanId, orderDetails.id);
+      await sendSubscriptionSuccessEmail(
+        customerEmail,
+        orderDetails,
+        subscriptionPlanId,
+      );
     }
 
     return orderDetails;
   } catch (error: any) {
     console.error(
-      "Failed to capture order:",
+      "Failed to capture subscription order:",
       error.response?.data || error.message,
     );
     throw new Error(
-      error.response?.data?.message || "Failed to capture PayPal order",
+      error.response?.data?.message ||
+        "Failed to capture PayPal subscription order",
     );
   }
 }
 
-export async function updatePropertyStatus(propertyId: string) {
-  const property = await db
+async function createSubscription(
+  userId: string,
+  subscriptionPlanId: string,
+  paypalSubscriptionId: string,
+) {
+  const plan = await db
     .select()
-    .from(properties)
-    .where(eq(properties.id, propertyId))
+    .from(subscriptionPlans)
+    .where(eq(subscriptionPlans.id, subscriptionPlanId))
     .then((rows) => rows[0]);
 
-  if (!property) return;
+  if (!plan) {
+    throw new Error("Subscription plan not found");
+  }
 
-  const status =
-    property.transactionType === "sale"
-      ? "sold"
-      : property.transactionType === "rent"
-        ? "rented"
-        : undefined;
+  const now = new Date();
+  const endDate = new Date(now);
+  endDate.setDate(now.getDate() + Number(plan.durationDays));
 
-  if (!status) return;
+  await db.insert(subscriptions).values({
+    id: uuidv4(),
+    userId,
+    subscriptionPlanId,
+    paypalSubscriptionId,
+    status: "active",
+    startDate: now,
+    endDate,
+    createdAt: now,
+    updatedAt: now,
+  });
 
   await db
-    .update(properties)
+    .update(users)
     .set({
-      status,
+      role: "agency",
       updatedAt: new Date(),
     })
-    .where(eq(properties.id, propertyId));
+    .where(eq(users.id, userId));
 }
