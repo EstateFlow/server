@@ -14,7 +14,6 @@ import { sendVerificationEmail } from "../services/email.service";
 import { refreshTokens } from "../db/schema/refresh_tokens.schema";
 import { googleOAuthCredentials } from "../db/schema/google_oauth_credentials.schema";
 import { facebookOAuthCredentials } from "../db/schema/facebook_oauth_credentials.schema";
-import bcrypt from "bcrypt";
 
 import {
   User,
@@ -45,7 +44,6 @@ export const register = async ({
     .select()
     .from(users)
     .where(eq(users.email, email));
-  console.log("service");
   console.log(existingUser[0]);
 
   if (existingUser.length > 0) {
