@@ -121,7 +121,7 @@ router.get("/", authMiddleware, getUser);
  *       500:
  *         description: Internal server error
  */
-router.get("/all", requireRole(["admin"]), getAllUsers);
+router.get("/all", authMiddleware, getAllUsers);
 
 /**
  * @swagger

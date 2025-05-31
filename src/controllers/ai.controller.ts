@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import type { Response, NextFunction } from "express";
 import * as aiService from "../services/ai.service";
 import { AuthRequest } from "../middleware/auth.middleware";
 
@@ -7,6 +7,17 @@ type ExpressHandler = (
   res: Response,
   next: NextFunction,
 ) => Promise<void>;
+
+export const getAllSystemPrompts: ExpressHandler = async (req, res) => {
+  try {
+    const systemPrompts = await aiService.getAllSystemPrompts();
+    res.status(200).json({
+      prompts: systemPrompts,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
 
 export const getSystemPrompt: ExpressHandler = async (req, res) => {
   try {

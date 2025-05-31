@@ -54,7 +54,11 @@ export const getUserById: ExpressHandler = async (req, res) => {
 export const getAllUsers: ExpressHandler = async (req, res) => {
   try {
     const userId = req.user?.userId;
-    const users = await userService.getAllUsers(userId ?? "");
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized: User ID not provided" });
+      return;
+    }
+    const users = await userService.getAllUsers(userId);
     res.status(200).json(users);
   } catch (error: any) {
     console.error("Error in getUser:", error);

@@ -12,6 +12,11 @@ import { parseAIResponse } from "../utils/ai.utils";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 const activeChatSessions = new Map();
 
+export const getAllSystemPrompts = async () => {
+  const allSystemPrompts = await db.select().from(systemPrompts);
+  return allSystemPrompts;
+};
+
 export const getDefaultSystemPrompt = async (userId: string) => {
   try {
     const [user] = await db

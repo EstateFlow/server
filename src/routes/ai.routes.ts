@@ -6,6 +6,7 @@ import {
   getConversationHistory,
   sendMessage,
   getVisibleConversationHistory,
+  getAllSystemPrompts,
 } from "../controllers/ai.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
 
@@ -85,6 +86,77 @@ router.use(authMiddleware);
  *                 message:
  *                   type: string
  *                   example: "Default system prompt not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+
+router.get("/system-prompts", getAllSystemPrompts);
+
+/**
+ * @swagger
+ * /api/ai/system-prompts:
+ *   get:
+ *     summary: Get all system prompts
+ *     description: Retrieves all system prompts available in the system.
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: System prompts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 prompts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                         description: Unique identifier of the system prompt
+ *                       name:
+ *                         type: string
+ *                         description: Name of the system prompt
+ *                       content:
+ *                         type: string
+ *                         description: Content of the system prompt
+ *                       isDefault:
+ *                         type: boolean
+ *                         description: Indicates if this is the default prompt
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         description: Creation timestamp
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         description: Last update timestamp
+ *             example:
+ *               prompts:
+ *                 - id: "123e4567-e89b-12d3-a456-426614174000"
+ *                   name: "Default AI Prompt"
+ *                   content: "You are a helpful AI assistant for property analysis."
+ *                   isDefault: true
+ *                   createdAt: "2025-05-26T18:20:00Z"
+ *                   updatedAt: "2025-05-26T18:20:00Z"
+ *                 - id: "456e7890-e89b-12d3-a456-426614174001"
+ *                   name: "Seller Agency Prompt"
+ *                   content: "You are an expert AI for property market analysis."
+ *                   isDefault: false
+ *                   createdAt: "2025-05-26T18:25:00Z"
+ *                   updatedAt: "2025-05-26T18:25:00Z"
  *       500:
  *         description: Internal server error
  *         content:
