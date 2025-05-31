@@ -88,3 +88,43 @@ export const getPropertyViewsByDate = async (req: AuthRequest, res: Response) =>
   const views = await getPropertyViewStatsByDate(propertyId, start, end);
   res.json({ propertyId, views });
 };
+
+export const totalSales = async (req: AuthRequest, res: Response): Promise<void> => {
+  const startDate = parseDate(req.query.startDate);
+  const endDate = parseDate(req.query.endDate);
+
+  if (!startDate || !endDate) {
+    res.status(400).json({ message: "Missing or invalid startDate or endDate" });
+    return;
+  }
+
+  const data = await statsService.getTotalSales(startDate, endDate);
+  res.json(data);
+};
+
+export const topViewedProperties = async (req: AuthRequest, res: Response): Promise<void> => {
+  const startDate = parseDate(req.query.startDate);
+  const endDate = parseDate(req.query.endDate);
+  const limit = Number(req.query.limit) || 10;
+
+  if (!startDate || !endDate) {
+    res.status(400).json({ message: "Missing or invalid startDate or endDate" });
+    return;
+  }
+
+  const data = await statsService.getTopViewedProperties(startDate, endDate, limit);
+  res.json(data);
+};
+
+export const newUsersStats = async (req: AuthRequest, res: Response): Promise<void> => {
+  const startDate = parseDate(req.query.startDate);
+  const endDate = parseDate(req.query.endDate);
+
+  if (!startDate || !endDate) {
+    res.status(400).json({ message: "Missing or invalid startDate or endDate" });
+    return;
+  }
+
+  const data = await statsService.getNewUsersStats(startDate, endDate);
+  res.json(data);
+};

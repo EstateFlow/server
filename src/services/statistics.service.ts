@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { and, between, eq } from 'drizzle-orm';
 import { properties } from "../db/schema/properties.schema";
 import { propertyViews } from "../db/schema/property_views.schema";
+import { users } from "../db/schema/users.schema";
 
 export const UKRAINE_REGIONS = [
   "Вінницька",
@@ -176,4 +177,56 @@ export const getPropertyViewStatsByDate = async (
     );
 
   return result[0]?.count ?? 0;
+};
+
+export const getTotalSales = async (startDate: Date, endDate: Date) => {
+  const result = await db.execute(sql`
+    SELECT 
+      COUNT(*)::int AS total_sales,
+      SUM(price)::numeric AS total_amount
+    FROM ${properties}
+    WHERE updated_at BETWEEN ${startDate} AND ${endDate}
+    AND status IN ('sold', 'rented')
+  `);
+
+  return {
+    totalSales: (result as any).rows?.[0]?.total_sales ?? 0,
+    totalAmount: (result as any).rows?.[0]?.total_amount ?? '0',
+  };
+};
+
+export const getTopViewedProperties = async (startDate: Date, endDate: Date, limit = 10) => {
+  const result = await db.execute(sql`
+    SELECT 
+      p.id,
+      p.title,
+      p.price,
+      p.address,
+      COUNT(pv.id)::int AS view_count
+    FROM ${properties} p
+    LEFT JOIN ${propertyViews} pv ON p.id = pv.property_id
+    WHERE pv.viewed_at BETWEEN ${startDate} AND ${endDate}
+    GROUP BY p.id
+    ORDER BY view_count DESC
+    LIMIT ${limit}
+  `);
+
+  return (result as any).rows ?? [];
+};
+
+export const getNewUsersStats = async (startDate: Date, endDate: Date) => {
+  const result = await db.execute(sql`
+    SELECT 
+      COUNT(CASE WHEN role = 'renter_buyer' THEN 1 END)::int AS new_buyers,
+      COUNT(CASE WHEN role = 'private_seller' THEN 1 END)::int AS new_sellers,
+      COUNT(CASE WHEN role = 'agency' THEN 1 END)::int AS new_agencies
+    FROM ${users}
+    WHERE created_at BETWEEN ${startDate} AND ${endDate}
+  `);
+
+  return (result as any).rows?.[0] ?? {
+    new_buyers: 0,
+    new_sellers: 0,
+    new_agencies: 0
+  };
 };
