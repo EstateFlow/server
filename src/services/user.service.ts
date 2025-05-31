@@ -3,7 +3,9 @@ import { properties } from "../db/schema/properties.schema";
 import { subscriptionPlans } from "../db/schema/subscription_plans.schema";
 import { subscriptions } from "../db/schema/subscriptions.schema";
 import { users } from "../db/schema/users.schema";
-import { and, eq, gte } from "drizzle-orm";
+import { and, eq, gte, ne } from "drizzle-orm";
+import bcrypt from "bcrypt";
+import { Role } from "../types/auth.types";
 
 export const getUser = async (userId: string) => {
   const userResult = await db
@@ -120,6 +122,11 @@ export const getUserById = async (userId: string) => {
   };
 };
 
+export const getAllUsers = async (userId: string) => {
+  const allUsers = await db.select().from(users).where(ne(users.id, userId));
+  return allUsers;
+};
+
 export const updateUser = async (
   userId: string,
   data: { username?: string; avatarUrl?: string; bio?: string },
@@ -169,4 +176,105 @@ export const updateUser = async (
     bio: user.bio,
     updatedAt: user.updatedAt,
   };
+};
+
+export const updateUserById = async (
+  userId: string,
+  updatedUserInfo: {
+    username?: string;
+    avatarUrl?: string;
+    bio?: string;
+    email?: string;
+    role?: "renter_buyer" | "private_seller" | "agency" | "moderator" | "admin";
+    listingLimit?: number;
+  },
+) => {
+  const updateData: any = {};
+  if (updatedUserInfo.username) updateData.username = updatedUserInfo.username;
+  if (updatedUserInfo.avatarUrl)
+    updateData.avatarUrl = updatedUserInfo.avatarUrl;
+  if (updatedUserInfo.bio) updateData.bio = updatedUserInfo.bio;
+  if (updatedUserInfo.role) updateData.role = updatedUserInfo.role;
+  if (updatedUserInfo.listingLimit !== undefined)
+    updateData.listingLimit = updatedUserInfo.listingLimit;
+
+  if (updatedUserInfo.email) {
+    const existingUser = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(and(eq(users.email, updatedUserInfo.email), ne(users.id, userId)));
+
+    if (existingUser.length > 0) {
+      throw new Error("User with this email already exists");
+    }
+    updateData.email = updatedUserInfo.email;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    throw new Error("No valid fields to update");
+  }
+
+  updateData.updatedAt = new Date();
+
+  await db.update(users).set(updateData).where(eq(users.id, userId));
+
+  const userResult = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (userResult.length === 0) {
+    throw new Error("User not found");
+  }
+
+  return userResult[0];
+};
+
+export const addNewUser = async (newUser: {
+  avatarUrl: string;
+  username: string;
+  email: string;
+  password: string;
+  role: Role;
+  bio: string;
+}) => {
+  const existingUser = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, newUser.email));
+
+  if (existingUser.length) {
+    throw new Error("User with this email already exists");
+  }
+
+  const passwordHash = await bcrypt.hash(newUser.password, 10);
+
+  const [insertedUser] = await db
+    .insert(users)
+    .values({
+      username: newUser.username,
+      email: newUser.email,
+      passwordHash,
+      role: newUser.role as Role,
+      avatarUrl: newUser.avatarUrl,
+      bio: newUser.bio,
+      isEmailVerified: true,
+    })
+    .returning();
+
+  return insertedUser;
+};
+
+export const deleteUser = async (userId: string) => {
+  const [deletedUser] = await db
+    .delete(users)
+    .where(eq(users.id, userId))
+    .returning();
+
+  if (!deletedUser) {
+    throw new Error("User not found");
+  }
+
+  return deletedUser;
 };
