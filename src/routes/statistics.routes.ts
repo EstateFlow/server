@@ -17,7 +17,7 @@ const router = Router();
 
 /**
  * @swagger
- * /stats/listings-by-region:
+ * /api/stats/listings-by-region:
  *   get:
  *     summary: Get number of listings by region within a specified period
  *     tags:
@@ -67,7 +67,7 @@ router.get(
 
 /**
  * @swagger
- * /stats/price-stats-by-region:
+ * /api/stats/price-stats-by-region:
  *   get:
  *     summary: Get price statistics by region within a specified period
  *     tags:
@@ -121,7 +121,7 @@ router.get(
 
 /**
  * @swagger
- * /stats/top-regions:
+ * /api/stats/top-regions:
  *   get:
  *     summary: Get top regions by number of listings within a specified period
  *     tags:
@@ -171,7 +171,7 @@ router.get(
 
 /**
  * @swagger
- * /stats/average-price-growth:
+ * /api/stats/average-price-growth:
  *   get:
  *     summary: Get average price growth by region within a specified period
  *     tags:
@@ -221,7 +221,7 @@ router.get(
 
 /**
  * @swagger
- * /stats/property-views/{propertyId}:
+ * /api/stats/property-views/{propertyId}:
  *   get:
  *     summary: Get property view stats by date range
  *     tags:
@@ -265,7 +265,7 @@ router.get('/property-views/:propertyId', getPropertyViewsByDate);
 
 /**
  * @swagger
- * /stats/total-sales:
+ * /api/stats/total-sales:
  *   get:
  *     summary: Get total sales and rented properties statistics
  *     tags:
@@ -315,7 +315,7 @@ router.get(
 
 /**
  * @swagger
- * /stats/top-viewed:
+ * /api/stats/top-viewed:
  *   get:
  *     summary: Get top viewed properties
  *     tags:
@@ -377,7 +377,7 @@ router.get(
 
 /**
  * @swagger
- * /stats/new-users:
+ * /api/stats/new-users:
  *   get:
  *     summary: Get statistics of new users by type
  *     tags:

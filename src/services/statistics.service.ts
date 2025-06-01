@@ -196,17 +196,18 @@ export const getTotalSales = async (startDate: Date, endDate: Date) => {
 };
 
 export const getTopViewedProperties = async (startDate: Date, endDate: Date, limit = 10) => {
-  const result = await db.execute(sql`
+    const result = await db.execute(sql`
     SELECT 
       p.id,
       p.title,
       p.price,
       p.address,
-      COUNT(pv.id)::int AS view_count
+      COALESCE(COUNT(pv.id), 0)::int AS view_count
     FROM ${properties} p
-    LEFT JOIN ${propertyViews} pv ON p.id = pv.property_id
-    WHERE pv.viewed_at BETWEEN ${startDate} AND ${endDate}
-    GROUP BY p.id
+    LEFT JOIN ${propertyViews} pv 
+      ON p.id = pv.property_id 
+      AND pv.viewed_at BETWEEN ${startDate} AND ${endDate}
+    GROUP BY p.id, p.title, p.price, p.address
     ORDER BY view_count DESC
     LIMIT ${limit}
   `);
