@@ -166,13 +166,16 @@ export const getPropertyViewStatsByDate = async (
   startDate: Date,
   endDate: Date,
 ) => {
+  const adjustedEndDate = new Date(endDate);
+  adjustedEndDate.setHours(23, 59, 59, 999);
+
   const result = await db
     .select({ count: sql<number>`count(*)` })
     .from(propertyViews)
     .where(
       and(
         eq(propertyViews.propertyId, propertyId),
-        between(propertyViews.viewedAt, startDate, endDate),
+        between(propertyViews.viewedAt, startDate, adjustedEndDate),
       ),
     );
 
@@ -246,4 +249,3 @@ export const getNewUsersStats = async (startDate: Date, endDate: Date) => {
     }
   );
 };
-
