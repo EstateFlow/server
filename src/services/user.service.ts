@@ -19,6 +19,7 @@ export const getUser = async (userId: string) => {
       bio: users.bio,
       isEmailVerified: users.isEmailVerified,
       listingLimit: users.listingLimit,
+      paypalCredentials: users.paypalCredentials,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })
@@ -41,6 +42,7 @@ export const getUser = async (userId: string) => {
     bio: user.bio,
     isEmailVerified: user.isEmailVerified,
     listingLimit: user.listingLimit,
+    paypalCredentials: user.paypalCredentials,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
