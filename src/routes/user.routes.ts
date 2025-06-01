@@ -530,6 +530,8 @@ router.delete("/:userId", requireRole(["admin"]), deleteUser);
  *                         type: string
  *                       description:
  *                         type: string
+ *                       status:
+ *                         type: string
  *                       propertyType:
  *                         type: string
  *                         enum: [house, apartment]
@@ -546,15 +548,30 @@ router.delete("/:userId", requireRole(["admin"]), deleteUser);
  *                         type: integer
  *                       address:
  *                         type: string
- *                       status:
- *                         type: string
- *                         enum: [active, inactive, sold, rented]
  *                       createdAt:
  *                         type: string
  *                         format: date-time
  *                       updatedAt:
  *                         type: string
  *                         format: date-time
+ *                       images:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                            id:
+ *                              type: string
+ *                              example: "789e0123-e89b-12d3-a456-426614174000"
+ *                            imageUrl:
+ *                              type: string
+ *                              example: "https://example.com/property-image.jpg"
+ *                              isPrimary:
+ *                                type: boolean
+ *                                example: true
+ *                              createdAt:
+ *                                type: string
+ *                                format: date-time
+ *                                example: "2025-05-30T19:02:00Z"
  *       400:
  *         description: Bad Request – user ID is required
  *       401:
