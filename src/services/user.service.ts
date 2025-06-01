@@ -3,9 +3,10 @@ import { properties } from "../db/schema/properties.schema";
 import { subscriptionPlans } from "../db/schema/subscription_plans.schema";
 import { subscriptions } from "../db/schema/subscriptions.schema";
 import { users } from "../db/schema/users.schema";
-import { and, eq, gte, ne } from "drizzle-orm";
+import { and, eq, gte, inArray, ne } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { Role } from "../types/auth.types";
+import { propertyImages } from "../db/schema/property_images.schema";
 
 export const getUser = async (userId: string) => {
   const userResult = await db
@@ -80,12 +81,49 @@ export const getUserById = async (userId: string) => {
       rooms: properties.rooms,
       address: properties.address,
       createdAt: properties.createdAt,
+      status: properties.status,
       updatedAt: properties.updatedAt,
     })
     .from(properties)
     .where(
       and(eq(properties.ownerId, user.id), eq(properties.isVerified, true)),
     );
+
+  const propertyIds = propertiesResult.map((prop) => prop.id);
+  const imagesResult =
+    propertyIds.length > 0
+      ? await db
+          .select({
+            propertyId: propertyImages.propertyId,
+            id: propertyImages.id,
+            imageUrl: propertyImages.imageUrl,
+            isPrimary: propertyImages.isPrimary,
+            createdAt: propertyImages.createdAt,
+          })
+          .from(propertyImages)
+          .where(inArray(propertyImages.propertyId, propertyIds))
+      : [];
+
+  const imagesByPropertyId = imagesResult.reduce(
+    (acc, image) => {
+      if (!acc[image.propertyId]) {
+        acc[image.propertyId] = [];
+      }
+      acc[image.propertyId].push({
+        id: image.id,
+        imageUrl: image.imageUrl,
+        isPrimary: image.isPrimary,
+        createdAt: image.createdAt,
+      });
+      return acc;
+    },
+    {} as Record<string, any[]>,
+  );
+
+  const propertiesWithImages = propertiesResult.map((property) => ({
+    ...property,
+    images: imagesByPropertyId[property.id] || [],
+  }));
 
   const subscriptionResult = await db
     .select({
@@ -117,7 +155,7 @@ export const getUserById = async (userId: string) => {
     bio: user.bio,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
-    properties: propertiesResult,
+    properties: propertiesWithImages,
     subscription: subscriptionResult.length > 0 ? subscriptionResult[0] : {},
   };
 };
