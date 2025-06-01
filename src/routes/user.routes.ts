@@ -621,7 +621,7 @@ router.get("/:userId", authMiddleware, getUserById);
  *                   type: string
  *                 bio:
  *                   type: string
- *                paypalCredentials:
+ *                 paypalCredentials:
  *                   type: string
  *                 updatedAt:
  *                   type: string
