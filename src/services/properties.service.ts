@@ -275,7 +275,7 @@ export const addNewProperty = async (input: CreatePropertyInput) => {
   if (role === "private_seller" && (listingLimit || 0) !== 0) {
     await db
       .update(users)
-      .set({ listingLimit: listingLimit || 0 - 1 })
+      .set({ listingLimit: (ownerData?.listingLimit || 1) - 1 })
       .where(eq(users.id, input.ownerId));
   }
 
