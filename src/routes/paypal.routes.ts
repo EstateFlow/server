@@ -5,22 +5,55 @@ const router = Router();
 
 /**
  * @swagger
- * /paypal/create-order:
+ * tags:
+ *   name: PayPal
+ *
+ * /api/paypal/create-order:
  *   post:
- *     summary: Create a PayPal order
- *     tags:
- *       - PayPal
+ *     summary: Create a new PayPal order
+ *     tags: [PayPal]
  *     requestBody:
- *       description: Order amount
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - amount
+ *               - item
  *             properties:
  *               amount:
  *                 type: string
- *                 example: "9.99"
+ *                 description: The total amount for the order
+ *                 example: "99.99"
+ *               currency:
+ *                 type: string
+ *                 description: Currency code (defaults to USD if not provided)
+ *                 example: "USD"
+ *                 default: "USD"
+ *               item:
+ *                 type: object
+ *                 required:
+ *                   - name
+ *                   - sku
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                     description: Item name
+ *                     example: "Premium Property Listing"
+ *                   description:
+ *                     type: string
+ *                     description: Optional item description
+ *                     example: "30-day featured listing for property"
+ *                   sku:
+ *                     type: string
+ *                     description: Stock keeping unit (usually property ID)
+ *                     example: "prop_12345"
+ *                   category:
+ *                     type: string
+ *                     enum: [DIGITAL_GOODS, PHYSICAL_GOODS, DONATION]
+ *                     description: Item category
+ *                     default: PHYSICAL_GOODS
  *     responses:
  *       200:
  *         description: PayPal order created successfully
@@ -31,13 +64,40 @@ const router = Router();
  *               properties:
  *                 id:
  *                   type: string
+ *                   description: PayPal order ID
+ *                   example: "5O190127TN364715T"
+ *                 status:
+ *                   type: string
+ *                   description: Order status
+ *                   example: "CREATED"
+ *                 links:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       href:
+ *                         type: string
+ *                       rel:
+ *                         type: string
+ *                       method:
+ *                         type: string
+ *       400:
+ *         description: Invalid input data
  *       500:
- *         description: Failed to create PayPal order
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to create PayPal order"
  */
 router.post("/create-order", async (req, res) => {
   try {
-    const { amount } = req.body;
-    const order = await createOrder(amount);
+    const { amount, item } = req.body;
+    const order = await createOrder(amount, item);
     res.json({ id: order.id });
   } catch (err) {
     const error = err as Error;
@@ -47,41 +107,80 @@ router.post("/create-order", async (req, res) => {
 
 /**
  * @swagger
- * /paypal/capture-order:
+ * /api/paypal/capture-order:
  *   post:
- *     summary: Capture a PayPal order
- *     tags:
- *       - PayPal
+ *     summary: Capture a PayPal payment
+ *     description: Captures the payment for an approved PayPal order and updates property status
+ *     tags: [PayPal]
  *     requestBody:
- *       description: PayPal order ID
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - orderId
  *             properties:
  *               orderId:
  *                 type: string
- *                 example: "8LY61829WD9084701"
+ *                 description: PayPal order ID to capture
+ *                 example: "5O190127TN364715T"
+ *               email:
+ *                 type: string
+ *                 description: Customer email for receipt (optional, will use payer email if not provided)
+ *                 example: "customer@example.com"
  *     responses:
  *       200:
- *         description: PayPal order captured successfully
+ *         description: Payment captured successfully
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 status:
- *                   type: string
  *                 id:
  *                   type: string
+ *                   description: PayPal order ID
+ *                   example: "5O190127TN364715T"
+ *                 status:
+ *                   type: string
+ *                   description: Order status
+ *                   example: "COMPLETED"
+ *                 createTime:
+ *                   type: string
+ *                   format: date-time
+ *                   description: Order creation timestamp
+ *                 updateTime:
+ *                   type: string
+ *                   format: date-time
+ *                   description: Order update timestamp
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                       sku:
+ *                         type: string
+ *       400:
+ *         description: Invalid order ID or missing required fields
+ *       404:
+ *         description: Order not found
  *       500:
- *         description: Failed to capture PayPal order
+ *         description: Failed to capture payment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to capture PayPal order"
  */
 router.post("/capture-order", async (req, res) => {
   try {
-    const { orderId } = req.body;
-    const capture = await captureOrder(orderId);
+    const { orderId, propertyId, email } = req.body;
+    const capture = await captureOrder(orderId, propertyId, email);
     res.json({ status: capture.status, id: capture.id });
   } catch (err) {
     const error = err as Error;

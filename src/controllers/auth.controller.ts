@@ -11,6 +11,7 @@ export const register: ExpressHandler = async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
     await authService.register({ username, email, password, role });
+    console.log("controller");
     res
       .status(201)
       .json({ message: "Registration successful. Please verify your email." });
@@ -75,6 +76,7 @@ export const refreshToken: ExpressHandler = async (req, res) => {
       await authService.refreshToken({
         refreshToken,
       });
+
     res.json({ accessToken, refreshToken: newRefreshToken });
   } catch (error: any) {
     console.error("Error in refreshToken:", error);
@@ -90,14 +92,14 @@ export const refreshToken: ExpressHandler = async (req, res) => {
 
 export const googleAuth: ExpressHandler = async (req, res) => {
   try {
-    const { code } = req.body;
+    const { code, role } = req.body;
 
     if (!code) {
       res.status(400).json({ message: "Authorization code is required" });
       return;
     }
     const { accessToken, refreshToken, isNewUser } =
-      await authService.googleAuth(code);
+      await authService.googleAuth(code, role);
 
     res.json({
       accessToken,
@@ -107,20 +109,29 @@ export const googleAuth: ExpressHandler = async (req, res) => {
         ? "User created and logged in via Google"
         : "Logged in via Google",
     });
-  } catch (error) {
-    console.error("Google auth error:", error);
+  } catch (error: any) {
+    console.error("Error in googleAuth:", error);
+    if (
+      error.message === "Role is required for new user registration" ||
+      error.message.includes("Account already exists with a different role") ||
+      error.message === "This Google account is already linked to another user"
+    ) {
+      res.status(400).json({ message: error.message });
+    } else {
+      res.status(500).json({ message: "Google authentication failed" });
+    }
   }
 };
 
 export const facebookAuth: ExpressHandler = async (req, res) => {
   try {
-    const { code } = req.body;
+    const { code, role } = req.body;
     if (!code) {
       res.status(400).json({ message: "Authorization code is required" });
       return;
     }
 
-    const result = await authService.facebookAuth(code);
+    const result = await authService.facebookAuth(code, role);
 
     res.json({
       accessToken: result.accessToken,
@@ -131,10 +142,16 @@ export const facebookAuth: ExpressHandler = async (req, res) => {
         : "Logged in via Facebook",
     });
   } catch (error: any) {
-    console.error(
-      "Controller - Facebook auth error:",
-      error.response?.data || error.message,
-    );
-    res.status(500).json({ message: "Facebook authentication failed" });
+    console.error("Error in facebookAuth:", error);
+    if (
+      error.message === "Role is required for new user registration" ||
+      error.message.includes("Account already exists with a different role") ||
+      error.message ===
+        "This Facebook account is already linked to another user"
+    ) {
+      res.status(400).json({ message: error.message });
+    } else {
+      res.status(500).json({ message: "Facebook authentication failed" });
+    }
   }
 };

@@ -47,6 +47,7 @@
     "drizzle-orm": "^0.43.1",
     "estateflow_server": "file:",
     "express": "^5.1.0",
+    "follow-redirects": "^1.15.9",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^7.0.3",
     "pg": "^8.15.6",

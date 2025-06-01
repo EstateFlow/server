@@ -25,6 +25,7 @@ import {
   RefreshTokenResult,
   GoogleAuthResult,
   FacebookAuthResult,
+  Role,
 } from "../types/auth.types";
 
 export const register = async ({
@@ -43,6 +44,7 @@ export const register = async ({
     .select()
     .from(users)
     .where(eq(users.email, email));
+  console.log(existingUser[0]);
 
   if (existingUser.length > 0) {
     throw new Error("User already exists");
@@ -51,10 +53,23 @@ export const register = async ({
   const passwordHash = await hashPassword(password);
   const verificationToken = uuidv4();
 
-  const userResult = await db
-    .insert(users)
-    .values({ username, email, passwordHash, role })
-    .returning();
+  let userResult;
+  if (role === "renter_buyer") {
+    userResult = await db
+      .insert(users)
+      .values({ username, email, passwordHash, role, listingLimit: 5 })
+      .returning();
+  } else if (role === "agency") {
+    userResult = await db
+      .insert(users)
+      .values({ username, email, passwordHash, role, listingLimit: 1000 })
+      .returning();
+  } else {
+    userResult = await db
+      .insert(users)
+      .values({ username, email, passwordHash, role, listingLimit: -1 })
+      .returning();
+  }
 
   const user: User = userResult[0];
   const userId = user.id;
@@ -162,7 +177,7 @@ export const login = async ({
 export const refreshToken = async ({
   refreshToken,
 }: RefreshTokenInput): Promise<RefreshTokenResult> => {
-  const tokenResult = await db
+  const tokenResults = await db
     .select({ userId: refreshTokens.userId })
     .from(refreshTokens)
     .where(
@@ -173,11 +188,12 @@ export const refreshToken = async ({
       ),
     );
 
-  if (!tokenResult.length) {
+  if (!tokenResults.length) {
     throw new Error("Invalid or expired refresh token");
   }
 
-  const userId = tokenResult[0].userId;
+  const userId = tokenResults[0].userId;
+
   const user = await db
     .select({ email: users.email })
     .from(users)
@@ -190,7 +206,12 @@ export const refreshToken = async ({
   await db
     .update(refreshTokens)
     .set({ revoked: true })
-    .where(eq(refreshTokens.token, refreshToken));
+    .where(
+      and(
+        eq(refreshTokens.token, refreshToken),
+        eq(refreshTokens.userId, userId),
+      ),
+    );
 
   const accessToken = generateJwt(userId, user[0].email);
   const newRefreshToken = await generateRefreshToken(userId);
@@ -198,7 +219,10 @@ export const refreshToken = async ({
   return { accessToken, refreshToken: newRefreshToken };
 };
 
-export const googleAuth = async (code: string): Promise<GoogleAuthResult> => {
+export const googleAuth = async (
+  code: string,
+  role?: Role,
+): Promise<GoogleAuthResult> => {
   try {
     const tokenResponse = await axios.post(
       "https://oauth2.googleapis.com/token",
@@ -228,6 +252,7 @@ export const googleAuth = async (code: string): Promise<GoogleAuthResult> => {
       .select({
         id: users.id,
         isEmailVerified: users.isEmailVerified,
+        role: users.role,
       })
       .from(users)
       .where(eq(users.email, email));
@@ -235,20 +260,46 @@ export const googleAuth = async (code: string): Promise<GoogleAuthResult> => {
     let userId: string;
     let isNewUser = false;
 
+    let existingGoogleCredential = await db
+      .select({
+        userId: googleOAuthCredentials.userId,
+      })
+      .from(googleOAuthCredentials)
+      .where(eq(googleOAuthCredentials.googleId, google_id));
+
     if (userResult.length === 0) {
+      if (!role) {
+        throw new Error("Role is required for new user registration");
+      }
+
       const userResult = await db
         .insert(users)
         .values({
           email,
           isEmailVerified: true,
           username: email.split("@")[0],
-          role: "renter_buyer",
+          role,
         })
         .returning();
       userId = userResult[0].id;
       isNewUser = true;
     } else {
       userId = userResult[0].id;
+
+      if (
+        existingGoogleCredential.length > 0 &&
+        existingGoogleCredential[0].userId !== userId
+      ) {
+        throw new Error(
+          "This Google account is already linked to another user",
+        );
+      }
+
+      if (role && userResult[0].role !== role) {
+        throw new Error(
+          `Account already exists with a different role: ${userResult[0].role}`,
+        );
+      }
       await db
         .update(users)
         .set({ isEmailVerified: true })
@@ -287,12 +338,13 @@ export const googleAuth = async (code: string): Promise<GoogleAuthResult> => {
     };
   } catch (error) {
     console.error("Error in googleAuth:", error);
-    throw new Error("Google authentication failed");
+    throw error;
   }
 };
 
 export const facebookAuth = async (
   code: string,
+  role?: Role,
 ): Promise<FacebookAuthResult> => {
   try {
     if (!code) {
@@ -326,14 +378,11 @@ export const facebookAuth = async (
 
     const { id: facebook_id, email } = userInfoResponse.data;
 
-    if (!email) {
-      throw new Error("Email not provided by Facebook");
-    }
-
     let userResult = await db
       .select({
         id: users.id,
         isEmailVerified: users.isEmailVerified,
+        role: users.role,
       })
       .from(users)
       .where(eq(users.email, email));
@@ -341,20 +390,47 @@ export const facebookAuth = async (
     let userId: string;
     let isNewUser = false;
 
+    let existingFacebookCredential = await db
+      .select({
+        userId: facebookOAuthCredentials.userId,
+      })
+      .from(facebookOAuthCredentials)
+      .where(eq(facebookOAuthCredentials.facebookId, facebook_id));
+
     if (userResult.length === 0) {
+      if (!role) {
+        throw new Error("Role is required for new user registration");
+      }
+
       const userResult = await db
         .insert(users)
         .values({
           email,
           isEmailVerified: true,
           username: email.split("@")[0],
-          role: "renter_buyer",
+          role: role,
         })
         .returning();
       userId = userResult[0].id;
       isNewUser = true;
     } else {
       userId = userResult[0].id;
+
+      if (
+        existingFacebookCredential.length > 0 &&
+        existingFacebookCredential[0].userId !== userId
+      ) {
+        throw new Error(
+          "This Facebook account is already linked to another user",
+        );
+      }
+
+      if (role && userResult[0].role !== role) {
+        throw new Error(
+          `Account already exists with a different role: ${userResult[0].role}`,
+        );
+      }
+
       await db
         .update(users)
         .set({ isEmailVerified: true })
@@ -394,12 +470,7 @@ export const facebookAuth = async (
       isNewUser,
     };
   } catch (error: any) {
-    console.error(
-      "Service - Facebook auth error:",
-      error.response?.data || error.message,
-    );
-    throw new Error(
-      `Facebook authentication failed: ${error.response?.data?.error?.message || error.message}`,
-    );
+    console.error("Error in facebookAuth:", error);
+    throw error;
   }
 };

@@ -1,10 +1,4 @@
-import {
-  Router,
-  Request,
-  Response,
-  NextFunction,
-  RequestHandler,
-} from "express";
+import { Router } from "express";
 import {
   facebookAuth,
   googleAuth,
@@ -13,16 +7,8 @@ import {
   register,
   verifyEmail,
 } from "../controllers/auth.controller";
-import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
-
-interface AuthRequest extends Request {
-  user?: {
-    userId: string;
-    email: string;
-  };
-}
 
 /**
  * @swagger
@@ -207,6 +193,10 @@ router.post("/refresh-token", refreshToken);
  *             properties:
  *               code:
  *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [renter_buyer, private_seller, agency, moderator, admin]
+ *                 description: Role of the user (required for new user registration)
  *     responses:
  *       200:
  *         description: Google authentication successful
@@ -217,16 +207,40 @@ router.post("/refresh-token", refreshToken);
  *               properties:
  *                 accessToken:
  *                   type: string
+ *                   description: JWT access token
  *                 refreshToken:
  *                   type: string
+ *                   description: Refresh token
  *                 isNewUser:
  *                   type: boolean
+ *                   description: Indicates if a new user was created
  *                 message:
  *                   type: string
+ *                   description: Success message
  *       400:
- *         description: Authorization code is required
+ *         description: Bad request (e.g., missing authorization code, role required for new user, role mismatch, or Google account already linked)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   enum:
+ *                     - Authorization code is required
+ *                     - Role is required for new user registration
+ *                     - Account already exists with a different role: [role]
+ *                     - This Google account is already linked to another user
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Google authentication failed
  */
 router.post("/google", googleAuth);
 
@@ -237,7 +251,7 @@ router.post("/google", googleAuth);
  *     summary: Authenticate or register user via Facebook OAuth
  *     tags: [Auth]
  *     requestBody:
- *       description: Authorization code from Facebook OAuth
+ *       description: Authorization code from Facebook OAuth and optional role for new users
  *       required: true
  *       content:
  *         application/json:
@@ -248,6 +262,11 @@ router.post("/google", googleAuth);
  *             properties:
  *               code:
  *                 type: string
+ *                 description: Authorization code from Facebook OAuth
+ *               role:
+ *                 type: string
+ *                 enum: [renter_buyer, private_seller, agency, moderator, admin]
+ *                 description: Role of the user (required for new user registration)
  *     responses:
  *       200:
  *         description: Facebook authentication successful
@@ -258,16 +277,40 @@ router.post("/google", googleAuth);
  *               properties:
  *                 accessToken:
  *                   type: string
+ *                   description: JWT access token
  *                 refreshToken:
  *                   type: string
+ *                   description: Refresh token
  *                 isNewUser:
  *                   type: boolean
+ *                   description: Indicates if a new user was created
  *                 message:
  *                   type: string
+ *                   description: Success message
  *       400:
- *         description: Authorization code is required
+ *         description: Bad request (e.g., missing authorization code, role required for new user, role mismatch, or Facebook account already linked)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   enum:
+ *                     - Authorization code is required
+ *                     - Role is required for new user registration
+ *                     - Account already exists with a different role: [role]
+ *                     - This Facebook account is already linked to another user
  *       500:
- *         description: Facebook authentication failed
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Facebook authentication failed
  */
 router.post("/facebook", facebookAuth);
 

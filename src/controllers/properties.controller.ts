@@ -21,7 +21,10 @@ export const getProperties: ExpressHandler = async (req, res) => {
       return;
     }
 
-    const properties = await propertiesService.getProperties(filter ?? "");
+    const properties = await propertiesService.getProperties(
+      filter ?? "",
+      req.user?.userId,
+    );
     res.status(200).json(properties);
   } catch (error) {
     console.error("Error fetching properties:", error);
@@ -40,7 +43,10 @@ export const getProperty: ExpressHandler = async (req, res) => {
       return;
     }
 
-    const property = await propertiesService.getProperty(propertyId);
+    const property = await propertiesService.getProperty(
+      propertyId,
+      req.user?.userId,
+    );
     res.status(200).json(property);
   } catch (error: any) {
     console.error(`Error fetching property ${req.params.propertyId}:`, error);
@@ -61,11 +67,15 @@ export const addNewProperty: ExpressHandler = async (req, res) => {
       ...propertyData,
     });
     res.status(201).json(newProperty);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error adding property:", error);
-    const message =
-      error instanceof Error ? error.message : "Internal server error";
-    res.status(500).json({ error: message });
+    if (error.message === "Listings limit reached") {
+      res.status(403).json({ message: "Listings limit reached" });
+    } else {
+      res
+        .status(500)
+        .json({ message: error.message || "Internal server error" });
+    }
   }
 };
 
@@ -109,6 +119,7 @@ export const updateProperty: ExpressHandler = async (req, res) => {
 
     const updatedProperty = await propertiesService.updateProperty(
       propertyId,
+      req.user?.userId ?? "",
       updatedPropertyData,
     );
 
@@ -125,4 +136,15 @@ export const updateProperty: ExpressHandler = async (req, res) => {
     console.error("Error updating property:", error);
     res.status(500).json({ error: "Internal server error" });
   }
+};
+
+export const verifyPropertyHandler = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const updated = await propertiesService.verifyProperty(id);
+  if (!updated) {
+    return res.status(404).json({ message: "Property not found" });
+  }
+
+  return res.status(200).json(updated);
 };

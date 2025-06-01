@@ -3,7 +3,7 @@ import { pricingHistory } from "../db/schema/pricing_history.schema";
 import { properties } from "../db/schema/properties.schema";
 import { propertyImages } from "../db/schema/property_images.schema";
 import { propertyViews } from "../db/schema/property_views.schema";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, sql } from "drizzle-orm";
 import {
   Property,
   PropertyImage,
@@ -13,9 +13,29 @@ import {
   UpdatePropertyInput,
 } from "../types/properties.types";
 import { users } from "../db/schema/users.schema";
+import { wishlist } from "../db/schema/wishlist.schema";
+import { sendPriceChangeNotification } from "./email.service";
+
+const isPropertyWished = async (
+  propertyId: string,
+  userId?: string,
+): Promise<boolean> => {
+  if (!userId) return false;
+
+  const result = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(wishlist)
+    .where(
+      and(eq(wishlist.propertyId, propertyId), eq(wishlist.userId, userId)),
+    )
+    .limit(1);
+
+  return result[0].count > 0;
+};
 
 export const getProperties = async (
   filterParam: string = "active",
+  userId?: string,
 ): Promise<PropertyWithRelations[]> => {
   let propertiesList;
 
@@ -24,7 +44,16 @@ export const getProperties = async (
       propertiesList = await db
         .select({
           property: properties,
-          owner: users,
+          owner: {
+            id: users.id,
+            email: users.email,
+            username: users.username,
+            role: users.role,
+            isEmailVerified: users.isEmailVerified,
+            paypalCredentials: users.paypalCredentials,
+            createdAt: users.createdAt,
+            updatedAt: users.updatedAt,
+          },
         })
         .from(properties)
         .leftJoin(users, eq(properties.ownerId, users.id))
@@ -36,7 +65,12 @@ export const getProperties = async (
       propertiesList = await db
         .select({
           property: properties,
-          owner: users,
+          owner: {
+            id: users.id,
+            email: users.email,
+            username: users.username,
+            role: users.role,
+          },
         })
         .from(properties)
         .leftJoin(users, eq(properties.ownerId, users.id))
@@ -51,7 +85,12 @@ export const getProperties = async (
       propertiesList = await db
         .select({
           property: properties,
-          owner: users,
+          owner: {
+            id: users.id,
+            email: users.email,
+            username: users.username,
+            role: users.role,
+          },
         })
         .from(properties)
         .leftJoin(users, eq(properties.ownerId, users.id))
@@ -66,7 +105,12 @@ export const getProperties = async (
       propertiesList = await db
         .select({
           property: properties,
-          owner: users,
+          owner: {
+            id: users.id,
+            email: users.email,
+            username: users.username,
+            role: users.role,
+          },
         })
         .from(properties)
         .leftJoin(users, eq(properties.ownerId, users.id));
@@ -78,7 +122,7 @@ export const getProperties = async (
 
   const propertyIds = propertiesList.map((p) => p.property.id);
 
-  const [images, views, pricing] = await Promise.all([
+  const [images, views, pricing, wishedStatuses] = await Promise.all([
     db
       .select()
       .from(propertyImages)
@@ -91,19 +135,29 @@ export const getProperties = async (
       .select()
       .from(pricingHistory)
       .where(inArray(pricingHistory.propertyId, propertyIds)),
+    Promise.all(
+      propertyIds.map((propertyId) => isPropertyWished(propertyId, userId)),
+    ),
   ]);
 
-  return propertiesList.map(({ property, owner }) => ({
+  return propertiesList.map(({ property, owner }, index) => ({
     ...property,
     images: images.filter((img) => img.propertyId === property.id),
     views: views.filter((view) => view.propertyId === property.id),
     pricingHistory: pricing.filter((p) => p.propertyId === property.id),
-    owner,
+    owner: {
+      id: owner?.id ?? "",
+      email: owner?.email ?? "",
+      username: owner?.username ?? "",
+      role: owner?.role ?? "",
+    },
+    isWished: wishedStatuses[index],
   }));
 };
 
 export const getProperty = async (
   propertyId: string,
+  userId?: string,
 ): Promise<PropertyWithRelations> => {
   const property = await db
     .select({
@@ -111,7 +165,20 @@ export const getProperty = async (
       image: propertyImages,
       view: propertyViews,
       pricing: pricingHistory,
-      owner: users,
+      owner: {
+        id: users.id,
+        email: users.email,
+        username: users.username,
+        role: users.role,
+      },
+      isWished: userId
+        ? sql<boolean>`EXISTS (
+            SELECT 1
+            FROM ${wishlist}
+            WHERE ${wishlist.propertyId} = ${properties.id}
+            AND ${wishlist.userId} = ${userId}
+          )`.as("isWished")
+        : sql<boolean>`FALSE`.as("isWished"),
     })
     .from(properties)
     .where(eq(properties.id, propertyId))
@@ -124,6 +191,8 @@ export const getProperty = async (
     throw new Error(`Property with ID ${propertyId} not found`);
   }
 
+  const isWished = await isPropertyWished(propertyId, userId);
+
   const propertyWithRelations = property.reduce(
     (acc: PropertyWithRelations, row) => {
       const { property, image, view, pricing, owner } = row;
@@ -134,7 +203,13 @@ export const getProperty = async (
           images: [],
           views: [],
           pricingHistory: [],
-          owner: owner,
+          owner: {
+            id: owner?.id ?? "",
+            email: owner?.email ?? "",
+            username: owner?.username ?? "",
+            role: owner?.role ?? "",
+          },
+          isWished,
         };
       }
 
@@ -151,12 +226,32 @@ export const getProperty = async (
 };
 
 export const addNewProperty = async (input: CreatePropertyInput) => {
+  const user = await db
+    .select({
+      role: users.role,
+      listingLimit: users.listingLimit,
+    })
+    .from(users)
+    .where(eq(users.id, input.ownerId))
+    .limit(1);
+
+  if (!user[0]) {
+    throw new Error("User not found");
+  }
+
+  const { role, listingLimit } = user[0];
+
+  if (role === "private_seller" && listingLimit !== null && listingLimit <= 0) {
+    throw new Error("Listings limit reached");
+  }
+
   const newProperty = await db
     .insert(properties)
     .values({
       ownerId: input.ownerId,
       title: input.title,
       description: input.description,
+      facilities: input.facilities,
       propertyType: input.propertyType,
       transactionType: input.transactionType,
       price: input.price,
@@ -171,6 +266,18 @@ export const addNewProperty = async (input: CreatePropertyInput) => {
     .returning();
 
   const property = newProperty[0];
+  const owner = await db
+    .select({ role: users.role, listingLimit: users.listingLimit })
+    .from(users)
+    .where(eq(users.id, input.ownerId));
+  const ownerData = owner[0];
+
+  if (role === "private_seller" && (listingLimit || 0) !== 0) {
+    await db
+      .update(users)
+      .set({ listingLimit: listingLimit || 0 - 1 })
+      .where(eq(users.id, input.ownerId));
+  }
 
   let images: PropertyImage[] = [];
   if (input.images && input.images.length > 0) {
@@ -225,6 +332,7 @@ export const deleteProperty = async (propertyId: string): Promise<void> => {
 
 export const updateProperty = async (
   propertyId: string,
+  userId: string,
   input: UpdatePropertyInput,
 ): Promise<PropertyWithRelations> => {
   const existingProperty = await db
@@ -244,6 +352,9 @@ export const updateProperty = async (
   if (input.description !== undefined) {
     updateData.description = input.description;
   }
+  if (input.facilities !== undefined) {
+    updateData.facilities = input.facilities;
+  }
   if (input.propertyType !== undefined) {
     updateData.propertyType = input.propertyType;
   }
@@ -252,6 +363,36 @@ export const updateProperty = async (
   }
   if (input.price !== undefined) {
     updateData.price = input.price;
+
+    if (existingProperty[0].price !== input.price) {
+      const [wishlistItem, user] = await Promise.all([
+        db
+          .select()
+          .from(wishlist)
+          .where(
+            and(
+              eq(wishlist.propertyId, propertyId),
+              eq(wishlist.userId, userId),
+            ),
+          )
+          .then((res) => res[0]),
+        db
+          .select({ id: users.id, email: users.email })
+          .from(users)
+          .where(eq(users.id, userId))
+          .then((res) => res[0]),
+      ]);
+
+      if (wishlistItem && user?.email) {
+        const propertyDetails = {
+          name: existingProperty[0].title,
+          address: existingProperty[0].address || "N/A",
+          oldPrice: existingProperty[0].price,
+          newPrice: input.price,
+        };
+        await sendPriceChangeNotification(user.email, propertyDetails);
+      }
+    }
   }
   if (input.currency !== undefined) {
     updateData.currency = input.currency;
@@ -354,5 +495,16 @@ export const updateProperty = async (
             .from(pricingHistory)
             .where(eq(pricingHistory.propertyId, propertyId)),
     owner,
+    isWished: false,
   };
+};
+
+export const verifyProperty = async (id: string) => {
+  const result = await db
+    .update(properties)
+    .set({ isVerified: true })
+    .where(eq(properties.id, id))
+    .returning();
+
+  return result[0];
 };

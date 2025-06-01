@@ -9,10 +9,15 @@ import propertiesRouter from "./routes/properties.routes";
 import paypalRouter from "./routes/paypal.routes";
 import aiRouter from "./routes/ai.routes";
 import wishlistRouter from "./routes/wishlist.routes";
+import statsRouter from "./routes/statistics.routes";
+import subscriptionRouter from "./routes/subscription.routes";
 import { initializeDefaultPrompt } from "./utils/ai.utils";
 import userRouter from "./routes/user.routes";
+import axios from "axios";
 
 dotenv.config();
+
+axios.defaults.headers.common["Accept-Encoding"] = "gzip, deflate";
 
 const app = express();
 
@@ -21,12 +26,14 @@ app.use(cookieParser());
 app.use(express.json());
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.use("/paypal", paypalRouter);
+app.use("/api/paypal", paypalRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/wishlist", wishlistRouter);
-app.use("/", propertiesRouter);
-app.use("/", userRouter);
+app.use("/api/stats", statsRouter);
+app.use("/api/properties", propertiesRouter);
+app.use("/api/user", userRouter);
+app.use("/api/subscription", subscriptionRouter);
 app.get("/", (req, res) => {
   res.send("Hello, world!");
 });

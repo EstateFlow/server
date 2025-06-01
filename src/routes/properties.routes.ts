@@ -5,7 +5,11 @@ import {
   getProperty,
   getProperties,
   updateProperty,
+  verifyPropertyHandler,
 } from "../controllers/properties.controller";
+import { requireRole } from "../middleware/requireUserWithRole.middleware";
+import { authMiddleware } from "../middleware/auth.middleware";
+import { optionalAuthMiddleware } from "../middleware/optionalAuth.middleware";
 
 const router = Router();
 
@@ -27,14 +31,6 @@ const router = Router();
  *         role:
  *           type: string
  *           enum: [renter_buyer, private_seller, agency, moderator, admin]
- *         isEmailVerified:
- *           type: boolean
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
  *       required:
  *         - id
  *         - username
@@ -114,6 +110,8 @@ const router = Router();
  *           type: string
  *         description:
  *           type: string
+ *         facilities:
+ *           type: string
  *         propertyType:
  *           type: string
  *           enum: [house, apartment]
@@ -161,6 +159,9 @@ const router = Router();
  *         owner:
  *           $ref: '#/components/schemas/User'
  *           nullable: true
+ *         isWished:
+ *           type: boolean
+ *           description: Indicates if the property is in the authenticated user's wishlist. Always false for unauthenticated users.
  *       required:
  *         - id
  *         - ownerId
@@ -169,6 +170,7 @@ const router = Router();
  *         - transactionType
  *         - price
  *         - address
+ *         - isWished
  *
  *     CreatePropertyInput:
  *       type: object
@@ -232,6 +234,8 @@ const router = Router();
  *           type: string
  *         description:
  *           type: string
+ *         facilities:
+ *           type: string
  *         propertyType:
  *           type: string
  *           enum: [house, apartment]
@@ -275,7 +279,7 @@ const router = Router();
 
 /**
  * @swagger
- * /properties:
+ * /api/properties:
  *   get:
  *     summary: Get all properties
  *     tags:
@@ -320,11 +324,11 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.get("/properties", getProperties);
+router.get("/", optionalAuthMiddleware, getProperties);
 
 /**
  * @swagger
- * /properties/{propertyId}:
+ * /api/properties/{propertyId}:
  *   get:
  *     summary: Get a property by ID
  *     tags:
@@ -350,11 +354,11 @@ router.get("/properties", getProperties);
  *       500:
  *         description: Internal server error
  */
-router.get("/properties/:propertyId", getProperty);
+router.get("/:propertyId", optionalAuthMiddleware, getProperty);
 
 /**
  * @swagger
- * /properties:
+ * /api/properties:
  *   post:
  *     summary: Add a new property
  *     tags:
@@ -369,14 +373,16 @@ router.get("/properties/:propertyId", getProperty);
  *     responses:
  *       201:
  *         description: Property created successfully
+ *       403:
+ *         description: Listings limit reached
  *       500:
  *         description: Internal server error
  */
-router.post("/properties", addNewProperty);
+router.post("/", authMiddleware, addNewProperty);
 
 /**
  * @swagger
- * /properties/{propertyId}:
+ * /api/properties/{propertyId}:
  *   patch:
  *     summary: Update a property by ID
  *     tags:
@@ -405,11 +411,11 @@ router.post("/properties", addNewProperty);
  *       500:
  *         description: Internal server error
  */
-router.patch("/properties/:propertyId", updateProperty);
+router.patch("/:propertyId", authMiddleware, updateProperty);
 
 /**
  * @swagger
- * /properties/{propertyId}:
+ * /api/properties/{propertyId}:
  *   delete:
  *     summary: Delete a property by ID
  *     tags:
@@ -433,6 +439,44 @@ router.patch("/properties/:propertyId", updateProperty);
  *       500:
  *         description: Internal server error
  */
-router.delete("/properties/:propertyId", deleteProperty);
+router.delete("/:propertyId", authMiddleware, deleteProperty);
+
+/**
+ * @swagger
+ * /api/properties/{id}/verify:
+ *   patch:
+ *     summary: Mark property as verified
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Property ID
+ *     responses:
+ *       200:
+ *         description: Property verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Property'
+ *       403:
+ *         description: Forbidden (not admin/moderator)
+ *       404:
+ *         description: Property not found
+ */
+function asyncHandler(fn: any) {
+  return function (req: any, res: any, next: any) {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
+router.patch(
+  "/:id/verify",
+  asyncHandler(requireRole(["admin", "moderator"])),
+  asyncHandler(verifyPropertyHandler),
+);
 
 export default router;

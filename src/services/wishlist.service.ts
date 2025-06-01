@@ -1,14 +1,28 @@
 import { db } from "../db";
 import { wishlist } from "../db/schema/wishlist.schema";
-import { eq, and } from "drizzle-orm";
+import { properties } from "../db/schema/properties.schema";
+import { propertyImages } from "../db/schema/property_images.schema";
+import { eq, and, sql } from "drizzle-orm";
 
 export const getWishlist = async (userId: string) => {
-  const wishlistResult = await db
-    .select()
+  const result = await db
+    .select({
+      property: properties,
+      images: sql<string[]>`
+        array_agg(property_images.image_url ORDER BY property_images.is_primary DESC)
+        FILTER (WHERE property_images.image_url IS NOT NULL)
+      `,
+    })
     .from(wishlist)
-    .where(eq(wishlist.userId, userId));
+    .innerJoin(properties, eq(wishlist.propertyId, properties.id))
+    .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+    .where(eq(wishlist.userId, userId))
+    .groupBy(properties.id);
 
-  return wishlistResult;
+  return result.map(({ property, images }) => ({
+    ...property,
+    images,
+  }));
 };
 
 export const addToWishlist = async (userId: string, propertyId: string) => {

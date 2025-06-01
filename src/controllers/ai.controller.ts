@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import type { Response, NextFunction } from "express";
 import * as aiService from "../services/ai.service";
 import { AuthRequest } from "../middleware/auth.middleware";
 
@@ -8,9 +8,22 @@ type ExpressHandler = (
   next: NextFunction,
 ) => Promise<void>;
 
+export const getAllSystemPrompts: ExpressHandler = async (req, res) => {
+  try {
+    const systemPrompts = await aiService.getAllSystemPrompts();
+    res.status(200).json({
+      prompts: systemPrompts,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 export const getSystemPrompt: ExpressHandler = async (req, res) => {
   try {
-    const systemPrompt = await aiService.getDefaultSystemPrompt();
+    const systemPrompt = await aiService.getDefaultSystemPrompt(
+      req.user!.userId,
+    );
     res.status(200).json({
       message: "System prompt retrieved successfully",
       prompts: systemPrompt,
@@ -109,12 +122,32 @@ export const getConversationHistory: ExpressHandler = async (req, res) => {
   }
 };
 
+export const getVisibleConversationHistory: ExpressHandler = async (
+  req,
+  res,
+) => {
+  try {
+    const messages = await aiService.getVisibleConversationHistory(
+      req.user!.userId,
+    );
+    res.json({ messages });
+  } catch (error: any) {
+    console.error("Error fetching visible conversation history:", error);
+    if (error.message === "User with this id does not exist") {
+      res.status(404).json({ message: "User with this id does not exist" });
+    } else if (error.message === "No active conversation found") {
+      res.status(404).json({ message: "No active conversation found" });
+    } else {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+};
+
 export const sendMessage: ExpressHandler = async (req, res) => {
   try {
-    const { conversationId } = req.params;
     const { message } = req.body;
 
-    if (!message || !conversationId) {
+    if (!message) {
       res.status(400).json({
         message: "Missing required fields:  message or conversationId",
       });
@@ -126,6 +159,7 @@ export const sendMessage: ExpressHandler = async (req, res) => {
       message: "Message sent successfully",
       userMessage: result.userMessage,
       aiResponse: result.aiResponse,
+      parsedProperties: result.parsedProperties,
     });
   } catch (error: any) {
     console.error("Error sending message:", error);
