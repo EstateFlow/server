@@ -605,6 +605,8 @@ router.get("/:userId", authMiddleware, getUserById);
  *                 format: uri
  *               bio:
  *                 type: string
+ *               paypalCredentials:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Successfully updated user
@@ -618,6 +620,8 @@ router.get("/:userId", authMiddleware, getUserById);
  *                 avatarUrl:
  *                   type: string
  *                 bio:
+ *                   type: string
+ *                paypalCredentials:
  *                   type: string
  *                 updatedAt:
  *                   type: string

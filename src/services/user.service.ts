@@ -167,16 +167,19 @@ export const getAllUsers = async (userId: string) => {
 
 export const updateUser = async (
   userId: string,
-  data: { username?: string; avatarUrl?: string; bio?: string },
+  data: { username?: string; avatarUrl?: string; bio?: string, paypalCredentials?: string },
 ) => {
   const updateData: any = {};
   if (data.username !== undefined) updateData.username = data.username;
   if (data.avatarUrl !== undefined) updateData.avatarUrl = data.avatarUrl;
   if (data.bio !== undefined) updateData.bio = data.bio;
+  if (data.paypalCredentials !== undefined)
+    updateData.paypalCredentials = data.paypalCredentials;
   if (
     data.username !== undefined ||
     data.avatarUrl !== undefined ||
-    data.bio !== undefined
+    data.bio !== undefined ||
+    data.paypalCredentials !== undefined
   )
     updateData.updatedAt = new Date();
 
@@ -193,6 +196,7 @@ export const updateUser = async (
       username: users.username,
       avatarUrl: users.avatarUrl,
       bio: users.bio,
+      paypalCredentials: users.paypalCredentials,
       role: users.role,
       isEmailVerified: users.isEmailVerified,
       listingLimit: users.listingLimit,
@@ -212,6 +216,7 @@ export const updateUser = async (
     username: user.username,
     avatarUrl: user.avatarUrl,
     bio: user.bio,
+    paypalCredentials: user.paypalCredentials,
     updatedAt: user.updatedAt,
   };
 };

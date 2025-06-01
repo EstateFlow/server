@@ -77,13 +77,14 @@ export const updateUser: ExpressHandler = async (req, res) => {
     res.status(401).json({ message: "Unauthorized" });
   }
 
-  const { username, avatarUrl, bio } = req.body;
+  const { username, avatarUrl, bio, paypalCredentials } = req.body;
 
   try {
     const updatedUser = await userService.updateUser(userId as string, {
       username,
       avatarUrl,
       bio,
+      paypalCredentials,
     });
 
     res.status(200).json(updatedUser);
