@@ -9,8 +9,8 @@ import { getProperties } from "./properties.service";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { parseAIResponse } from "../utils/ai.utils";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
-const activeChatSessions = new Map();
+export const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+export const activeChatSessions = new Map();
 
 export const getAllSystemPrompts = async () => {
   const allSystemPrompts = await db.select().from(systemPrompts);

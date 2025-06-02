@@ -15,6 +15,11 @@ import {
 import { users } from "../db/schema/users.schema";
 import { wishlist } from "../db/schema/wishlist.schema";
 import { sendPriceChangeNotification } from "./email.service";
+import { conversations } from "../db/schema/conversations.schema";
+import { messages } from "../db/schema/messages.schema";
+import { activeChatSessions, genAI } from "./ai.service";
+import { systemPrompts } from "../db/schema/system_prompts.schema";
+import { v4 as uuidv4 } from "uuid";
 
 const isPropertyWished = async (
   propertyId: string,
@@ -505,6 +510,165 @@ export const verifyProperty = async (id: string) => {
     .set({ isVerified: true })
     .where(eq(properties.id, id))
     .returning();
+
+  const property = result[0];
+
+  const [pricingHistoryRecords, images] = await Promise.all([
+    db.select().from(pricingHistory).where(eq(pricingHistory.propertyId, id)),
+    db.select().from(propertyImages).where(eq(propertyImages.propertyId, id)),
+  ]);
+
+  const newPropertySummary = `
+      - ID: ${property.id}
+      - Title: ${property.title || "Unknown"}
+      - Type: ${property.propertyType || "Unknown"}
+      - Description: ${property.description || "Unknown"}
+      - Transaction: ${property.transactionType || "Unknown"}
+      - Price: ${property.price ? `${property.price} ${property.currency}` : "Unknown"}
+      - Size: ${property.size ? `${property.size} sqm` : "Unknown"}
+      - Rooms: ${property.rooms || "Unknown"}
+      - Address: ${property.address || "Unknown"}
+      - Status: ${property.status || "Unknown"}
+      - Is Verified: ${property.isVerified ? "Yes" : "No"}
+      - Images: ${images.length || 0} images
+      - Facilities: ${property.facilities || "Unknown"}
+      - Pricing History: ${
+        pricingHistoryRecords.length
+          ? pricingHistoryRecords
+              .map((ph) => `${ph.price} ${ph.currency} on ${ph.effectiveDate}`)
+              .join(", ")
+          : "None"
+      }
+  `;
+
+  const activeConversations = await db
+    .select({
+      id: conversations.id,
+      userId: conversations.userId,
+      systemPromptId: conversations.systemPromptId,
+    })
+    .from(conversations)
+    .where(eq(conversations.isActive, true));
+
+  for (const conversation of activeConversations) {
+    if (!conversation.systemPromptId) {
+      console.warn(
+        `Conversation ${conversation.id} has no systemPromptId, skipping.`,
+      );
+      continue;
+    }
+
+    const [systemMessage] = await db
+      .select()
+      .from(messages)
+      .where(
+        and(
+          eq(messages.conversationId, conversation.id),
+          eq(messages.sender, "system"),
+          eq(messages.isVisible, false),
+        ),
+      )
+      .limit(1);
+
+    if (systemMessage) {
+      const updatedContent = `${
+        systemMessage.content
+      }\n\n### New Property Added:\n${newPropertySummary}`;
+
+      // Update the system message in the database
+      await db
+        .update(messages)
+        .set({
+          content: updatedContent,
+        })
+        .where(eq(messages.id, systemMessage.id));
+
+      const chat = activeChatSessions.get(conversation.id);
+      if (chat) {
+        const messageHistory = await db
+          .select({
+            sender: messages.sender,
+            content: messages.content,
+          })
+          .from(messages)
+          .where(eq(messages.conversationId, conversation.id))
+          .orderBy(messages.createdAt);
+
+        const history = messageHistory.map((msg) => ({
+          role: msg.sender === "ai" ? "model" : "user",
+          parts: [{ text: msg.content }],
+        }));
+
+        const model = genAI.getGenerativeModel({
+          model: "gemini-2.0-flash",
+        });
+        const updatedChat = model.startChat({
+          history,
+          generationConfig: {
+            maxOutputTokens: 8192,
+          },
+        });
+
+        activeChatSessions.set(conversation.id, updatedChat);
+      }
+    } else {
+      const [defaultPrompt] = await db
+        .select()
+        .from(systemPrompts)
+        .where(eq(systemPrompts.id, conversation.systemPromptId))
+        .limit(1);
+
+      if (defaultPrompt) {
+        const newSystemMessageContent = `
+          ${defaultPrompt.content}
+          ### Available Properties:
+          ${newPropertySummary}
+        `;
+
+        await db.insert(messages).values({
+          id: uuidv4(),
+          conversationId: conversation.id,
+          sender: "system",
+          content: newSystemMessageContent,
+          createdAt: new Date(),
+          isVisible: false,
+        });
+
+        const chat = activeChatSessions.get(conversation.id);
+        if (chat) {
+          const messageHistory = await db
+            .select({
+              sender: messages.sender,
+              content: messages.content,
+            })
+            .from(messages)
+            .where(eq(messages.conversationId, conversation.id))
+            .orderBy(messages.createdAt);
+
+          const history = messageHistory.map((msg) => ({
+            role: msg.sender === "ai" ? "model" : "user",
+            parts: [{ text: msg.content }],
+          }));
+
+          const model = genAI.getGenerativeModel({
+            model: "gemini-2.0-flash",
+          });
+          const updatedChat = model.startChat({
+            history,
+            generationConfig: {
+              maxOutputTokens: 8192,
+            },
+          });
+
+          activeChatSessions.set(conversation.id, updatedChat);
+        }
+      } else {
+        console.warn(
+          `No system prompt found for conversation ${conversation.id}`,
+        );
+      }
+    }
+  }
 
   return result[0];
 };
