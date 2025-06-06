@@ -218,9 +218,15 @@ export const getProperty = async (
         };
       }
 
-      if (image) acc.images.push(image);
-      if (view) acc.views.push(view);
-      if (pricing) acc.pricingHistory.push(pricing);
+      if (image && !acc.images.some((img) => img.id === image.id)) {
+        acc.images.push(image);
+      }
+      if (view && !acc.views.some((v) => v.id === view.id)) {
+        acc.views.push(view);
+      }
+      if (pricing && !acc.pricingHistory.some((p) => p.id === pricing.id)) {
+        acc.pricingHistory.push(pricing);
+      }
 
       return acc;
     },
