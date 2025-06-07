@@ -13,6 +13,7 @@ import statsRouter from "./routes/statistics.routes";
 import subscriptionRouter from "./routes/subscription.routes";
 import userRouter from "./routes/user.routes";
 import viewRouter from "./routes/view.routes";
+import filtersRouter from "./routes/filters.routes";
 import { initializeDefaultPrompt } from "./utils/ai.utils";
 import axios from "axios";
 
@@ -36,6 +37,7 @@ app.use("/api/properties", propertiesRouter);
 app.use("/api/user", userRouter);
 app.use("/api/subscription", subscriptionRouter);
 app.use("/api/views", viewRouter);
+app.use("/api/filters", filtersRouter);
 app.get("/", (req, res) => {
   res.send("Hello, world!");
 });
