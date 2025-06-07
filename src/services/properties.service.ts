@@ -440,6 +440,39 @@ export const updateProperty = async (
 
   let images: PropertyImage[] = [];
   if (input.images !== undefined) {
+    const existingImages = await db
+      .select()
+      .from(propertyImages)
+      .where(eq(propertyImages.propertyId, propertyId));
+
+    const newImages = input.images.filter(
+      (img) =>
+        !existingImages.some(
+          (existingImg) =>
+            existingImg.imageUrl === img.imageUrl &&
+            existingImg.isPrimary === img.isPrimary,
+        ),
+    );
+
+    if (newImages.length > 0) {
+      await db
+        .delete(propertyImages)
+        .where(eq(propertyImages.propertyId, propertyId));
+
+      images = await db
+        .insert(propertyImages)
+        .values(
+          newImages.map((img) => ({
+            propertyId,
+            imageUrl: img.imageUrl,
+            isPrimary: img.isPrimary,
+          })),
+        )
+        .returning();
+    } else {
+      images = existingImages;
+    }
+
     await db
       .delete(propertyImages)
       .where(eq(propertyImages.propertyId, propertyId));
