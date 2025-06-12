@@ -343,7 +343,6 @@ export const deleteProperty = async (propertyId: string): Promise<void> => {
 
 export const updateProperty = async (
   propertyId: string,
-  userId: string,
   input: UpdatePropertyInput,
 ): Promise<PropertyWithRelations> => {
   const existingProperty = await db
@@ -376,32 +375,32 @@ export const updateProperty = async (
     updateData.price = input.price;
 
     if (existingProperty[0].price !== input.price) {
-      const [wishlistItem, user] = await Promise.all([
-        db
-          .select()
-          .from(wishlist)
-          .where(
-            and(
-              eq(wishlist.propertyId, propertyId),
-              eq(wishlist.userId, userId),
-            ),
-          )
-          .then((res) => res[0]),
-        db
-          .select({ id: users.id, email: users.email })
-          .from(users)
-          .where(eq(users.id, userId))
-          .then((res) => res[0]),
-      ]);
+      const wishlistItems = await db
+        .select({ userId: wishlist.userId })
+        .from(wishlist)
+        .where(eq(wishlist.propertyId, propertyId));
 
-      if (wishlistItem && user?.email) {
+      const userIds = wishlistItems.map((item) => item.userId);
+      const allUsers = await db
+        .select({ id: users.id, email: users.email })
+        .from(users)
+        .where(inArray(users.id, userIds));
+
+      if (allUsers.length > 0) {
         const propertyDetails = {
           name: existingProperty[0].title,
           address: existingProperty[0].address || "N/A",
           oldPrice: existingProperty[0].price,
           newPrice: input.price,
         };
-        await sendPriceChangeNotification(user.email, propertyDetails);
+
+        await Promise.all(
+          allUsers.map((user) =>
+            user.email
+              ? sendPriceChangeNotification(user.email, propertyDetails)
+              : Promise.resolve(),
+          ),
+        );
       }
     }
   }
