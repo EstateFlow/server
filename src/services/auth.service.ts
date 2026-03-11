@@ -1,19 +1,19 @@
-import axios from "axios";
-import { v4 as uuidv4 } from "uuid";
+import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
 import {
   comparePassword,
   generateJwt,
   generateRefreshToken,
   hashPassword,
-} from "../utils/auth.utils";
-import { db } from "../db";
-import { roleEnum, users } from "../db/schema/users.schema";
-import { eq, gt, and } from "drizzle-orm";
-import { emailVerificationTokens } from "../db/schema/email_verification_tokens.schema";
-import { sendVerificationEmail } from "../services/email.service";
-import { refreshTokens } from "../db/schema/refresh_tokens.schema";
-import { googleOAuthCredentials } from "../db/schema/google_oauth_credentials.schema";
-import { facebookOAuthCredentials } from "../db/schema/facebook_oauth_credentials.schema";
+} from '../utils/auth.utils';
+import { db } from '../db';
+import { roleEnum, users } from '../db/schema/users.schema';
+import { eq, gt, and } from 'drizzle-orm';
+import { emailVerificationTokens } from '../db/schema/email_verification_tokens.schema';
+import { sendVerificationEmail } from '../services/email.service';
+import { refreshTokens } from '../db/schema/refresh_tokens.schema';
+import { googleOAuthCredentials } from '../db/schema/google_oauth_credentials.schema';
+import { facebookOAuthCredentials } from '../db/schema/facebook_oauth_credentials.schema';
 
 import {
   User,
@@ -26,7 +26,7 @@ import {
   GoogleAuthResult,
   FacebookAuthResult,
   Role,
-} from "../types/auth.types";
+} from '../types/auth.types';
 
 export const register = async ({
   username,
@@ -36,7 +36,7 @@ export const register = async ({
 }: RegisterInput): Promise<RegisterResult> => {
   if (!roleEnum.enumValues.includes(role)) {
     throw new Error(
-      `Invalid role. Must be one of: ${roleEnum.enumValues.join(", ")}`,
+      `Invalid role. Must be one of: ${roleEnum.enumValues.join(', ')}`
     );
   }
 
@@ -44,22 +44,21 @@ export const register = async ({
     .select()
     .from(users)
     .where(eq(users.email, email));
-  console.log(existingUser[0]);
 
   if (existingUser.length > 0) {
-    throw new Error("User already exists");
+    throw new Error('User already exists');
   }
 
   const passwordHash = await hashPassword(password);
   const verificationToken = uuidv4();
 
   let userResult;
-  if (role === "renter_buyer") {
+  if (role === 'renter_buyer') {
     userResult = await db
       .insert(users)
       .values({ username, email, passwordHash, role, listingLimit: 5 })
       .returning();
-  } else if (role === "agency") {
+  } else if (role === 'agency') {
     userResult = await db
       .insert(users)
       .values({ username, email, passwordHash, role, listingLimit: 1000 })
@@ -76,7 +75,7 @@ export const register = async ({
 
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
   if (isNaN(expiresAt.getTime())) {
-    throw new Error("Invalid email verification token expiration date");
+    throw new Error('Invalid email verification token expiration date');
   }
 
   await db.insert(emailVerificationTokens).values({
@@ -92,8 +91,8 @@ export const register = async ({
 };
 
 export const verifyEmail = async (token: string): Promise<void> => {
-  if (!token || typeof token !== "string") {
-    throw new Error("Invalid token format");
+  if (!token || typeof token !== 'string') {
+    throw new Error('Invalid token format');
   }
 
   console.log(`Verifying token: ${token}`);
@@ -104,8 +103,8 @@ export const verifyEmail = async (token: string): Promise<void> => {
     .where(
       and(
         eq(emailVerificationTokens.token, token),
-        gt(emailVerificationTokens.expiresAt, new Date()),
-      ),
+        gt(emailVerificationTokens.expiresAt, new Date())
+      )
     )
     .limit(1);
 
@@ -119,8 +118,8 @@ export const verifyEmail = async (token: string): Promise<void> => {
           db
             .select({ userId: emailVerificationTokens.userId })
             .from(emailVerificationTokens)
-            .where(eq(emailVerificationTokens.token, token)),
-        ),
+            .where(eq(emailVerificationTokens.token, token))
+        )
       );
 
     if (userResult.length > 0 && userResult[0].isEmailVerified) {
@@ -129,7 +128,7 @@ export const verifyEmail = async (token: string): Promise<void> => {
     }
 
     console.log(`Token not found or expired: ${token}`);
-    throw new Error("Invalid or expired token");
+    throw new Error('Invalid or expired token');
   }
 
   const userId = tokenResult[0].userId;
@@ -157,15 +156,15 @@ export const login = async ({
   const user = userResult[0];
 
   if (!user) {
-    throw new Error("User not found");
+    throw new Error('User not found');
   }
 
   if (!user.isEmailVerified) {
-    throw new Error("Please verify your email");
+    throw new Error('Please verify your email');
   }
 
-  if (!(await comparePassword(password, user.passwordHash || ""))) {
-    throw new Error("Incorrect password");
+  if (!(await comparePassword(password, user.passwordHash || ''))) {
+    throw new Error('Incorrect password');
   }
 
   const accessToken = generateJwt(user.id, email);
@@ -184,12 +183,12 @@ export const refreshToken = async ({
       and(
         eq(refreshTokens.token, refreshToken),
         gt(refreshTokens.expiresAt, new Date()),
-        eq(refreshTokens.revoked, false),
-      ),
+        eq(refreshTokens.revoked, false)
+      )
     );
 
   if (!tokenResults.length) {
-    throw new Error("Invalid or expired refresh token");
+    throw new Error('Invalid or expired refresh token');
   }
 
   const userId = tokenResults[0].userId;
@@ -200,7 +199,7 @@ export const refreshToken = async ({
     .where(eq(users.id, userId));
 
   if (!user.length) {
-    throw new Error("User not found");
+    throw new Error('User not found');
   }
 
   await db
@@ -209,8 +208,8 @@ export const refreshToken = async ({
     .where(
       and(
         eq(refreshTokens.token, refreshToken),
-        eq(refreshTokens.userId, userId),
-      ),
+        eq(refreshTokens.userId, userId)
+      )
     );
 
   const accessToken = generateJwt(userId, user[0].email);
@@ -221,29 +220,29 @@ export const refreshToken = async ({
 
 export const googleAuth = async (
   code: string,
-  role?: Role,
+  role?: Role
 ): Promise<GoogleAuthResult> => {
   try {
     const tokenResponse = await axios.post(
-      "https://oauth2.googleapis.com/token",
+      'https://oauth2.googleapis.com/token',
       {
         code,
         client_id: process.env.GOOGLE_CLIENT_ID,
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
         redirect_uri: process.env.GOOGLE_REDIRECT_URI,
-        grant_type: "authorization_code",
-      },
+        grant_type: 'authorization_code',
+      }
     );
 
     const { access_token, refresh_token, expires_in } = tokenResponse.data;
 
     const userInfoResponse = await axios.get(
-      "https://www.googleapis.com/oauth2/v2/userinfo",
+      'https://www.googleapis.com/oauth2/v2/userinfo',
       {
         headers: {
           Authorization: `Bearer ${access_token}`,
         },
-      },
+      }
     );
 
     const { id: google_id, email } = userInfoResponse.data;
@@ -269,7 +268,7 @@ export const googleAuth = async (
 
     if (userResult.length === 0) {
       if (!role) {
-        throw new Error("Role is required for new user registration");
+        throw new Error('Role is required for new user registration');
       }
 
       const userResult = await db
@@ -277,7 +276,7 @@ export const googleAuth = async (
         .values({
           email,
           isEmailVerified: true,
-          username: email.split("@")[0],
+          username: email.split('@')[0],
           role,
         })
         .returning();
@@ -291,13 +290,13 @@ export const googleAuth = async (
         existingGoogleCredential[0].userId !== userId
       ) {
         throw new Error(
-          "This Google account is already linked to another user",
+          'This Google account is already linked to another user'
         );
       }
 
       if (role && userResult[0].role !== role) {
         throw new Error(
-          `Account already exists with a different role: ${userResult[0].role}`,
+          `Account already exists with a different role: ${userResult[0].role}`
         );
       }
       await db
@@ -337,41 +336,41 @@ export const googleAuth = async (
       isNewUser,
     };
   } catch (error) {
-    console.error("Error in googleAuth:", error);
+    console.error('Error in googleAuth:', error);
     throw error;
   }
 };
 
 export const facebookAuth = async (
   code: string,
-  role?: Role,
+  role?: Role
 ): Promise<FacebookAuthResult> => {
   try {
     if (!code) {
-      throw new Error("Authorization code is missing");
+      throw new Error('Authorization code is missing');
     }
 
     const tokenResponse = await axios.post(
-      "https://graph.facebook.com/v20.0/oauth/access_token",
+      'https://graph.facebook.com/v20.0/oauth/access_token',
       {
         code,
         client_id: process.env.FACEBOOK_CLIENT_ID,
         client_secret: process.env.FACEBOOK_CLIENT_SECRET,
-        redirect_uri: process.env.FACEBOOK_REDIRECT_URI || "postmessage",
-        grant_type: "authorization_code",
+        redirect_uri: process.env.FACEBOOK_REDIRECT_URI || 'postmessage',
+        grant_type: 'authorization_code',
       },
       {
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-      },
+      }
     );
 
     const { access_token, expires_in } = tokenResponse.data;
 
-    const userInfoResponse = await axios.get("https://graph.facebook.com/me", {
+    const userInfoResponse = await axios.get('https://graph.facebook.com/me', {
       params: {
-        fields: "id,email",
+        fields: 'id,email',
         access_token,
       },
     });
@@ -399,7 +398,7 @@ export const facebookAuth = async (
 
     if (userResult.length === 0) {
       if (!role) {
-        throw new Error("Role is required for new user registration");
+        throw new Error('Role is required for new user registration');
       }
 
       const userResult = await db
@@ -407,7 +406,7 @@ export const facebookAuth = async (
         .values({
           email,
           isEmailVerified: true,
-          username: email.split("@")[0],
+          username: email.split('@')[0],
           role: role,
         })
         .returning();
@@ -421,13 +420,13 @@ export const facebookAuth = async (
         existingFacebookCredential[0].userId !== userId
       ) {
         throw new Error(
-          "This Facebook account is already linked to another user",
+          'This Facebook account is already linked to another user'
         );
       }
 
       if (role && userResult[0].role !== role) {
         throw new Error(
-          `Account already exists with a different role: ${userResult[0].role}`,
+          `Account already exists with a different role: ${userResult[0].role}`
         );
       }
 
@@ -470,7 +469,7 @@ export const facebookAuth = async (
       isNewUser,
     };
   } catch (error: any) {
-    console.error("Error in facebookAuth:", error);
+    console.error('Error in facebookAuth:', error);
     throw error;
   }
 };
